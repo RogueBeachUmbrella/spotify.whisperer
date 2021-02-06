@@ -1,0 +1,16 @@
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.exe
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.csprojAssemblyReference.cache
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.AssemblyInfoInputs.cache
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.AssemblyInfo.cs
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.deps.json
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.runtimeconfig.json
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.runtimeconfig.dev.json
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.dll
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Spotify.pdb
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\Newtonsoft.Json.dll
+C:\Users\jmgre\source\repos\Spotify\Spotify\bin\Debug\netcoreapp3.1\SpotifyAPI.Web.dll
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.csproj.CoreCompileInputs.cache
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.csproj.CopyComplete
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.dll
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.pdb
+C:\Users\jmgre\source\repos\Spotify\Spotify\obj\Debug\netcoreapp3.1\Spotify.genruntimeconfig.cache
