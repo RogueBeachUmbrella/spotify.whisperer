@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\jmgre\\source\\repos\\Spotify\\Spotify\\Spotify.csproj": {}
+    "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj": {}
   },
   "projects": {
-    "C:\\Users\\jmgre\\source\\repos\\Spotify\\Spotify\\Spotify.csproj": {
+    "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\jmgre\\source\\repos\\Spotify\\Spotify\\Spotify.csproj",
+        "projectUniqueName": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj",
         "projectName": "Spotify",
-        "projectPath": "C:\\Users\\jmgre\\source\\repos\\Spotify\\Spotify\\Spotify.csproj",
+        "projectPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj",
         "packagesPath": "C:\\Users\\jmgre\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\jmgre\\source\\repos\\Spotify\\Spotify\\obj\\",
+        "outputPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Microsoft\\Xamarin\\NuGet\\"
@@ -42,9 +42,33 @@
       "frameworks": {
         "netcoreapp3.1": {
           "dependencies": {
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[22.1.2, )"
+            },
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.0.78, )"
+            },
+            "Microsoft.AspNet.WebApi.Client": {
+              "target": "Package",
+              "version": "[5.2.7, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[5.0.3, )"
+            },
             "SpotifyAPI.Web": {
               "target": "Package",
               "version": "[6.0.0, )"
+            },
+            "System.Configuration.ConfigurationManager": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
+            "System.Data.SqlClient": {
+              "target": "Package",
+              "version": "[4.8.2, )"
             }
           },
           "imports": [

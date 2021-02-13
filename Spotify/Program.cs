@@ -2,7 +2,22 @@
 using System.Collections.Generic;
 using SpotifyAPI.Web;
 using Newtonsoft.Json;
-
+using System.Net.Http;
+using System.Net.Http.Formatting;
+using System.IO;
+using System.Collections;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Linq;
+using CsvHelper;
+using System.Globalization;
+using CsvHelper.Configuration;
+using CsvHelper.Configuration.Attributes;
+using System.Configuration;
+using Npgsql;
+using Dapper;
+using System.Data;
+using System.Data.SqlClient;
 
 namespace Spotify
 {
@@ -10,73 +25,197 @@ namespace Spotify
     {
         static void Main(string[] args)
         {
-            var spotify = new SpotifyClient("BQBg-8xIh4je-aCa6FpZOymuvvmxyI4QAoF1i876aNjpIX_nJjFb-T_hLnqDAm37LuyhZN9IVI9opS_2Gd6j5qJIVxbU_a2mV1iIqv6FGZjphJRz9odd4LJM5tCcPVmGye170mNuxR2BA-pe2A");
+            var appSettings = ConfigurationManager.AppSettings;
+            var connection = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString);
+            var spotifyClient = new SpotifyClient(appSettings["SpotifyToken"]);
 
-            //GetTracks(spotify);
-            //GetTrackArtists(spotify);
-            //GetArtistAlbums(spotify);
-            GetArtistRelatedArtists(spotify);
+            var chartTracks = GetChartTracks();
+            var tracks = GetTracks(spotifyClient, chartTracks);
+            //var trackAudioFeatures = GetTrackAudioFeatures(spotifyClient, chartTracks);
+            //var trackAudioAnalysis = GetTrackAudioAnalysis(spotifyClient, chartTracks);
+
+
+            var artists = GetTrackArtists(spotifyClient, tracks);
+            //var relatedArtists = GetArtistRelatedArtists(spotifyClient, artists);
+            //var artistAlbums = GetArtistAlbums(spotifyClient, artists);
+
+
+
+
+
+            var pgTracks = PGLoadTracks(tracks);
+            var pgArtists = PGLoadArtists(artists);
+            var pgChartTracks = PGLoadChartTracks(chartTracks, pgArtists, pgTracks, tracks);
+
 
         }
-
-
-        static void GetTracks(SpotifyClient spotify)
+        static List<Spotify.ChartTrack> GetChartTracks()
         {
-            var folder = @"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Tracks";
-            var ids = new List<string>() {
-                //"3IJYUaN3tx04S4TYyZHKoP", "19CSr8rwW05VJL2F91KFNK", "2Fxmhks0bxGSBdJ92vM42m", "78QR3Wp35dqAhFEc2qAGjE", "096YtKWNRXdmYKFLelSBto", "6J2LdBN97cDWn0MLxYh9HB", "7AQim7LbvFVZJE3O8TYgf2", "3jT2LKH0RSbQ8jIUNFzXm5", "2xLMifQCjDGFmkHkpNLD9h", "5IUtvfNvOyVYZUa6AJFrnP", "2IVsRhKrx8hlQBOWy4qebo", "3nS9a01VvXHQriLqJYwRqG", "6KfoDhO4XUWSbnyKjNp9c4", "2Z71PZlOeF9YVze4hy1A1a", "39Yp9wwQiSRIDOvrVg7mbk", "33gwZOGJWEZ7dRWPqPxBEZ", "0e7ipj03S05BNilyu5bRzt", "73YUReisjb3A9ActdLLjJQ", "07KXEDMj78x68D884wgVEm", "6MDdceLYec4AxohmorE4vH", "5wujBwqG7INdStqGd4tRMX", "0GO8y8jQk1PkHzS31d699N", "6eVxH9Kyanzrw636zJRPcw", "0vVMlbdYx2080Oa9FndPZr", "3ZCTVFBt2Brf31RLEnCkWJ", "2L4YgbxxwmwafMqLIjSx8q", "2wrJq5XKLnmhRXHIAf9xBa", "466cKvZn1j45IpxDdYZqdA", "003vvx7Niy0yvhvHt4a68B", "7yiSvALPjMrBLDDrbcDRNy", "75ZvA4QfFiZvzhj2xkaWAh", "5uCax9HTNlzGybIStD3vDh", "4wVOKKEHUJxHCFFNUWDn0B", "23T0OX7QOiIUFShSzbJ5Uo", "6ft4hAq6yde8jPZY2i5zLr", "4R2kfaDFhslZEMJqAFNpdd", "59qrUpoplZxbIZxk6X0Bm3", "6cx06DFPPHchuUAcTxznu9", "4vLBnQtece15fFhqWxZvJP", "1Z0cZI0UzNbP9L8MzzGxqf", "7dH9TPjTWQ60wOJkmYay8a", "6ocbgoVGwYJhOv1GgI9NsF", "7Jd0VVrzeTTWipxSzJ81aC", "2HbKqm4o0w5wEeEFXm2sD4", "7xQAfvXzm3AkraOtGPWIZg", "6XHVuErjQ4XNm6nDPVCxVX", "3oDkdAySo1VQQG0ptV7uwa", "3fqwjXwUGN6vbzIwvyFMhx", "0e4A9Fak1nJ7RtBD8YpoEo", "2QqJTIlGKRLJC3onkavYEz"
-                //"1SF8piqsZWn86DajVKih8F", "0k7wmahjkn389wAZdz19Cv", "7vrJn5hDSXRmdXoR30KgF1", "7fEoXCZTZFosUFvFQg1BmW", "5dOxHHMOFAbG3VH23t0xNm", "1rgnBhdG2JDFTbYkYRZAku", "55Am8neGJkdj2ADaM3aw5H", "696DnlkuDOXcMAnKlTgXXK", "5CFJRZRq6sdKKtRwNPWbYv", "6Gg1gjgKi2AK4e0qzsR7sd", "6Ozh9Ok6h4Oi1wUSLtBseN", "79s5XnCN4TJKTVMSmOx8Ep", "3QzAOrNlsabgbMwlZt7TAY", "7ju97lgwC2rKQ6wwsf9no9", "45S5WTQEGOB1VHr1Q4FuPl", "7Bar1kLTmsRmH6FCKKMEyU", "7uoFMmxln0GPXQ0AcCBXRq", "5MwynWK9s4hlyKHqhkNn4A", "30bqVoKjX479ab90a8Pafp", "0ada5XsQGLPUVbmTCkAP49", "527k23H0A4Q0UJN3vGs0Da", "3eekarcy7kvN4yt5ZFzltW", "0GzuHFG4Ql6DoyxFRnIk3F", "3K07bGe8iljQ3mOKArHLDo", "48q0vSHcJdhK3IiXH8C5WJ", "4umIPjkehX1r7uhmGvXiSV", "0PurA4JVJ8YQgSVopY8fn6", "0u2P5u6lvoDfwTYjAADbn4", "5f1joOtoMeyppIcJGZQvqJ", "3Dv1eDb0MEgF93GpLXlucZ", "5RubKOuDoPn5Kj5TLVxSxY", "1xQ6trAsedVPCdbtDAmk0c", "6gdLyYNuhWBzqwlOFSsXC7", "3JKgcAa7r07ocVWcV8bS0H", "1eMNW1HQjF1dbb4GtnmpaX", "0uxSUdBrJy9Un0EYoBowng", "6wQlQrTY5mVS8EGaFZVwVF", "6gxKUmycQX7uyMwJcweFjp", "20McUFi8KCIVdNDLrkTDuZ", "1ZMiCix7XSAbfAJlEZWMCp", "3ee8Jmje8o58CHK66QrVC2", "5NvOZCjZaGGGL597exlQWv", "3GVkPk8mqxz0itaAriG1L7", "1H7KnK26kc1YyellpbINEn", "58ge6dfP91o9oXMzq3XkIS", "2rRJrJEo19S2J82BDsQ3F7", "2rxQMGVafnNaRaXlRMWPde", "2JvzF1RMd7lE3KmFlsyZD8", "7GX5flRQZVHRAGd6B4TmDO", "6K4t31amVTZDgR3sKmwUJJ"
-                //"0RiRZpuVRbi7oqRdSMwhQY", "4saklk6nie3yiGePpBwUoc", "0ofHAoxe9vBkTCp2UQIavz", "4Iedi94TIaB2GGb1nMB68v", "7qEHsqek33rTcFNT9PFqLf", "53BHUFdQphHiZUUG3nx9zn", "5SWnsxjhdcEDc7LJjq9UHk", "2Oycxb8QbPkpHTo8ZrmG0B", "1K5KBOgreBi5fkEHvg5ap3", "0zLCBJZSiELJf02ucPP9wb", "5E30LdtzQTGqRvNd7l6kG5", "1VLtjHwRWOVJiE5Py7JxoQ", "2XIc1pqjXV3Cr2BQUGNBck", "2kS6td1yvmpNgZTt1q5pQq", "6ZuahEctZD6w75peme58hm", "43BlKpJcSrC9AsJ3F1DKg9", "7B3z0ySL9Rr0XvZEAjWZzM", "5u1n1kITHCxxp8twBcZxWy", "0eBXyY4SatzpE7opnzgXvz", "2gMXnyrvIjhVBUZwvLZDMP", "5VlTQnZO89Ioku8ssdbqJk", "3jjujdWJ72nww5eGnfs2E7", "4Q34FP1AT7GEl9oLgNtiWj", "0tbjiOUl4k492KPdWZS9sy", "4Z5FyQlevoHoa5FsIVKZju", "6NriykdkRrjQMZo1sfVYUo", "7o4gBbTM6UBLkOYPw9xMCz", "7m9OqQk4RVRkw9JJdeAw96", "7eJMfftS33KTjuF7lTsMCx", "5BK0uqwY9DNfZ630STAEaq", "4GBkffrtA51p17JH35irGA", "2rPHUAeUPbNgTmK18FPTiZ", "1IIKrJVP1C9N7iPtG6eOsK", "2mt1IqcFyY1zmYZT8Q3xw9", "3PfIrDoz19wz7qK7tYeu62", "7FIWs0pqAYbP91WWM0vlTQ", "7s95nPLMfiLTPoQ7pqUFmO", "5rZlwNFl01HqLWBQGryKSm", "0AUvWawuP0ibk4SQ3sIZjk", "0rKtyWc8bvkriBthvHKY8d", "6EDO9iiTtwNv6waLwa1UUq", "7bCfHiRcfUjG0YVVNUL7Ve", "1Cv1YLb4q0RzL6pybtaMLo", "6gBFPUFcJLzWGx4lenP6h2", "2GiJYvgVaD2HtM8GqD9EgQ", "62vpWI1CHwFy7tMIcSStl8", "57RA3JGafJm5zRtKJiKPIm", "6foY66mWZN0pSRjZ408c00", "1jaTQ3nqY3oAAYyCTbIvnM", "2kJwzbxV2ppxnQoYw4GLBZ"
-                //"3YJJjQPAbDT7mGpX3WtQ9A", "31qCy5ZaophVA81wtlwLc4", "6Im9k8u9iIzKMrmV7BWtlF", "3tjFYV6RSFtuktYl3ZtYcq", "7hxHWCCAIIxFLCzvDgnQHX", "4MzXwWMhyBbmu6hOcLVD49", "35mvY5S1H3J2QZyna3TFe0", "5vGLcdRuSbUhD8ScwsGSdA", "27OeeYzk6klgBh83TSvGMA", "0VjIjW4GlUZAMYd2vXMi3b", "5nujrmhLynf4yMoMtj8AQF", "0PvFJmanyNQMseIFrU708S", "4Oun2ylbjFKMPTiaSbbCih", "3Uo7WG0vmLQ07WB4BDwy7D", "1tkg4EHVoqnhR6iFEXb60y", "54bFM56PmE4YLRnqpW6Tha", "0A1hoCfMLkiAgvhWkkucJa", "2SAqBLGA283SUiwJ3xOUVI", "6zFMeegAMYQo0mt8rXtrli", "7ytR5pFWmSjzHJIeQkgog4", "2U5WueTLIK5WJLD7mvDODv", "2QjOHCTQ1Jl3zawyYOpxh6", "22LAwLoDA5b4AaGSkg6bKW", "57VeLYXrvNxe8Vs18K2M9W", "2Y0wPrPQBrGhoLn14xRYCG", "3w1WjD2zJqjBjDz5fwqQPJ", "4VXIryQMWpIdGgYR4TrjT1", "5YSHygGN9D0mID1NsVd5my", "1HbA4N1MiOsPthALesGFR1", "0sY6ZUTh4yoctD8VIXz339", "0ZLuW8uOXdFNWcI40C0OC2", "2r6OAV3WsYtXuXjvJ1lIDi", "6UelLqGlWMcVH1E5c4H7lY", "0nbXyq5TXYPCO7pr3N8S4I", "21jGcNKet2qwijlDFuPiPb", "45bE4HXI0AwGZXfZtMp8JR", "7kDUspsoYfLkWnZR7qwHZl", "285pBltuF7vW8TeWk8hdRR", "3UoULw70kMsiVXxW0L3A33", "6IBcOGPsniK3Pso1wHIhew", "4xqrdfXkTW4T0RauPLv3WA", "6AGOKlMZWLCaEJGnaROtF9", "4aarlAfLKVCTxUDNgbwhjH", "4y4spB9m0Q6026KfkAvy9Q", "30KctD1WsHKTIYczXjip5a", "3qgPpwtuRu5oP8EtFSj8HE", "6Hj9jySrnFppAI0sEMCZpJ", "02MWAaffLxlfxAUY7c5dvx", "0SErdEdRcVX1uJCf1eTGYH", "0E4Y1XIbs8GrAT1YqVy6dq"
-            };
-            var request = new TracksRequest(ids);
-            var tracks = spotify.Tracks.GetSeveral(request).Result.Tracks;
-            tracks.ForEach(t => {
-                System.IO.File.WriteAllText(@$"{folder}\track-{t.Id}.json", JsonConvert.SerializeObject(t));
+            var url = @"https://spotifycharts.com/regional/us/weekly/2021-01-22--2021-01-29/download";
+
+            var client = new HttpClient();
+            var responseStream = client.GetStreamAsync(url).Result;
+            var chartTracks = new List<Spotify.ChartTrack>();
+            using (var reader = new StreamReader(responseStream))
+            {
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    csv.Read();
+                    csv.Read();
+                    csv.ReadHeader();
+
+                    chartTracks = csv.GetRecords<Spotify.ChartTrack>().ToList();
+                }
+            }
+            return chartTracks;
+        }
+        static List<FullTrack> GetTracks(SpotifyClient spotifyClient, List<Spotify.ChartTrack> chartTracks)
+        {
+            var ids = chartTracks.Select(ct => ct.id).ToList();
+            var tracks = new List<FullTrack>();
+            for (int i = 0; i <= ids.Count - 50; i += 50)
+            {
+                var request = new TracksRequest(ids.GetRange(i, ((ids.Count - i) >= 50 ? 50 : (ids.Count - i))));
+                tracks.AddRange(spotifyClient.Tracks.GetSeveral(request).Result.Tracks);
+            }
+            return tracks;
+        }
+        static Dictionary<string, TrackAudioFeatures> GetTrackAudioFeatures(SpotifyClient spotifyClient, List<Spotify.ChartTrack> chartTracks)
+        {
+            var ids = chartTracks.Select(ct => ct.id).ToList();
+            var tracks = new Dictionary<string, TrackAudioFeatures>();
+            for (int i = 0; i <= ids.Count - 50; i += 50)
+            {
+                var request = new TracksAudioFeaturesRequest(ids.GetRange(i, (ids.Count - i) >= 50 ? 50 : (ids.Count - i)));
+                spotifyClient.Tracks.GetSeveralAudioFeatures(request).Result.AudioFeatures.ForEach(t =>
+                {
+                    tracks.Add(t.Id, t);
+                });
+            }
+            return tracks;
+        }
+        static Dictionary<string, TrackAudioAnalysis> GetTrackAudioAnalysis(SpotifyClient spotifyClient, List<Spotify.ChartTrack> chartTracks)
+        {
+            var ids = chartTracks.Select(ct => ct.id).ToList();
+            var tracks = new Dictionary<string, TrackAudioAnalysis>();
+            chartTracks.ForEach(track => {
+                var result = spotifyClient.Tracks.GetAudioAnalysis(track.id).Result;
+                tracks.Add(track.id, result);            
             });
+            return tracks;
         }
-
-        static void GetTrackArtists(SpotifyClient spotify)
+        static Dictionary<string, FullArtist> GetTrackArtists(SpotifyClient spotifyClient, List<FullTrack> fullTracks)
         {
-            string[] files = System.IO.Directory.GetFiles(@"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Tracks", "*.json");
             var ids = new List<string>();
-            foreach(string f in files)
+            fullTracks.ForEach(ft => ids.AddRange(ft.Artists.Select(a => a.Id).ToList()));
+            var artists = new Dictionary<string, FullArtist>();
+            for (int i = 0; i <= ids.Count; i += 50)
             {
-                var track = JsonConvert.DeserializeObject<FullTrack>(System.IO.File.ReadAllText(@$"{f}"));
-                track.Artists.ForEach(a => ids.Add(a.Id));
-            }
-
-            for(int i = 0; i <= ids.Count; i += 50)
-            {
-                var artists = spotify.Artists.GetSeveral(new ArtistsRequest(ids.GetRange(i, ((ids.Count - i) < 50 ? (ids.Count - i) : 50)))).Result.Artists;
-                artists.ForEach(a => {
-                    System.IO.File.WriteAllText(@$"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Artists\artist-{a.Id}.json", JsonConvert.SerializeObject(a));
+                var response = spotifyClient.Artists.GetSeveral(new ArtistsRequest(ids.GetRange(i, ((ids.Count - i) < 50 ? (ids.Count - i) : 50)))).Result.Artists;
+                response.ForEach(a => {
+                    artists.TryAdd(a.Id, a);
                 });
             }
+            return artists;
         }
-
-        static void GetArtistAlbums(SpotifyClient spotify)
+        static Dictionary<string, List<SimpleAlbum>> GetArtistAlbums(SpotifyClient spotifyClient, Dictionary<string, FullArtist> artists)
         {
-            string[] files = System.IO.Directory.GetFiles(@"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Artists", "*.json");
-            var ids = new List<string>();
-            foreach (string f in files)
+            var albums = new Dictionary<string, List<SimpleAlbum>>();
+            foreach (var artist in artists)
             {
-                var artist = JsonConvert.DeserializeObject<FullArtist>(System.IO.File.ReadAllText(@$"{f}"));
-                spotify.Artists.GetAlbums(artist.Id).Result.Items.ForEach(a => {
-                    System.IO.File.WriteAllText(@$"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Albums\album-{a.Id}.json", JsonConvert.SerializeObject(a));
+                albums.Add(artist.Key, spotifyClient.Artists.GetAlbums(artist.Key).Result.Items);
+            }
+            return albums;
+        }
+        static Dictionary<string, List<FullArtist>> GetArtistRelatedArtists(SpotifyClient spotifyClient, Dictionary<string, FullArtist> artists)
+        {
+            var relatedArtists = new Dictionary<string, List<FullArtist>>();
+            foreach (var artist in artists)
+            {
+                relatedArtists.Add(artist.Key, spotifyClient.Artists.GetRelatedArtists(artist.Key).Result.Artists);
+            }
+            return relatedArtists;
+        }
+        static List<PgSQL.Track> PGLoadTracks(List<FullTrack> tracks)
+        {
+            var pgChartTracks = new List<PgSQL.Track>();
+            string sqlQuery = "INSERT INTO track(duration_ms, explicit, name, popularity, preview_url, track_number, type, uri, spotify_url, id) VALUES (@duration_ms, @isexplicit, @name, @popularity, @preview_url, @track_number, @type, @uri, @spotify_url, @id) RETURNING track_id;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                tracks.ForEach(track =>
+                {
+                    var pgTrack = new PgSQL.Track()
+                    {
+                        duration_ms = track.DurationMs,
+                        isexplicit = track.Explicit,
+                        name = track.Name,
+                        popularity = track.Popularity,
+                        preview_url = track.PreviewUrl,
+                        track_number = track.TrackNumber,
+                        type = track.Type.ToString(),
+                        uri = track.Uri,
+                        spotify_url = track.ExternalUrls.FirstOrDefault().Value,
+                        id = track.Id
+                    };
+                    pgTrack.track_id = db.QuerySingle<int>(sqlQuery, pgTrack);
+                    pgChartTracks.Add(pgTrack);
+                });
+
+                return pgChartTracks;
+            }
+        }
+        static List<PgSQL.Artist> PGLoadArtists(Dictionary<string, FullArtist> artists)
+        {
+
+            var pgArtists = new List<PgSQL.Artist>();
+            string sqlQuery = "INSERT INTO artist(id, name, popularity, type, uri, followers, spotify_url) VALUES (@id, @name, @popularity, @type, @uri, @followers, @spotify_url) returning artist_id;";  
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                artists.ToList().ForEach(artist =>
+                {
+                    var pgArtist = new PgSQL.Artist()
+                    {
+                        id = artist.Value.Id,
+                        name = artist.Value.Name,
+                        popularity = artist.Value.Popularity,
+                        type = artist.Value.Type,
+                        uri = artist.Value.Uri,
+                        followers = artist.Value.Followers.Total,
+                        spotify_url = artist.Value.ExternalUrls.FirstOrDefault().Value
+                    };
+                    pgArtist.artist_id = db.QuerySingle<int>(sqlQuery, pgArtist);
+                    pgArtists.Add(pgArtist);
+                });
+                return pgArtists;
+            }
+        }            
+        static List<PgSQL.ChartTrack> PGLoadChartTracks(List<Spotify.ChartTrack> chartTracks, List<PgSQL.Artist> artists, List<PgSQL.Track> tracks, List<FullTrack> fullTracks)
+        {
+            var query = from chart in chartTracks
+                        join track in tracks on chart.id equals track.id
+                        join fullTrack in fullTracks on chart.id equals fullTrack.Id
+                        join artist in artists on fullTrack.Artists.Where(a => a.Name == chart.artist).FirstOrDefault().Name equals artist.name
+                        select new PgSQL.ChartTrack()
+                        {
+                            artist_id = artist.artist_id,
+                            track_id = track.track_id,
+                            position = chart.position,
+                            streams = chart.streams,
+                            country = "US",
+                            week_start = new DateTime(2020, 1, 22),
+                            week_end = new DateTime(2020, 1, 29)
+                        };
+
+            var pgChartTracks = new List<PgSQL.ChartTrack>();
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {                
+                string sqlQuery = "INSERT INTO chart_track(artist_id, track_id, \"position\", streams, country, week_start, week_end) VALUES(@artist_id, @track_id, @position, @streams, @country, @week_start, @week_end); ";
+                query.ToList().ForEach(q => { 
+                    db.Execute(sqlQuery, q);
                 });
             }
+            return pgChartTracks;
         }
 
-        static void GetArtistRelatedArtists(SpotifyClient spotify)
-        {
-            string[] files = System.IO.Directory.GetFiles(@"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Artists", "*.json");
-            var ids = new List<string>();
-            foreach (string f in files)
-            {
-                var artist = JsonConvert.DeserializeObject<FullArtist>(System.IO.File.ReadAllText(@$"{f}"));     
-                System.IO.File.WriteAllText(@$"C:\Users\jmgre\OneDrive\Documents\USF\4 - Advanced Database Management\Group Project\Spotify Data\api data\Related Artists\related-{artist.Id}.json", JsonConvert.SerializeObject(spotify.Artists.GetRelatedArtists(artist.Id).Result.Artists));
-            }
-        }
     }
 }
