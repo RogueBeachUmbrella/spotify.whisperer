@@ -164,13 +164,13 @@ namespace Spotify
                 return pgChartTracks;
             }
         }
-        static List<PgSQL.Artist> PGLoadArtists(Dictionary<string, FullArtist> artists)
+        static List<PgSQL.Artist> PGLoadArtists(Dictionary<string, FullArtist> artists, Dictionary<string, FullArtist> relatedArtists)
         {
-
             var pgArtists = new List<PgSQL.Artist>();
-            string sqlQuery = "INSERT INTO artist(id, name, popularity, type, uri, followers, spotify_url) VALUES (@id, @name, @popularity, @type, @uri, @followers, @spotify_url) returning artist_id;";  
+            string sqlQuery;
             using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
             {
+                sqlQuery = "INSERT INTO artist(id, name, popularity, type, uri, followers, spotify_url) VALUES (@id, @name, @popularity, @type, @uri, @followers, @spotify_url) returning artist_id;";
                 artists.ToList().ForEach(artist =>
                 {
                     var pgArtist = new PgSQL.Artist()
@@ -188,7 +188,114 @@ namespace Spotify
                 });
                 return pgArtists;
             }
-        }            
+        }
+        static void PGLoadRelatedArtists()
+        {
+
+        }
+        static List<PgSQL.Artist> PGLoadArtistImages(Dictionary<string, FullArtist> artists, List<PgSQL.Artist> pgArtists)
+        {
+            var pgArtistImages = new List<PgSQL.ArtistImage>();
+            string sqlQuery = "INSERT INTO artist_image(artist_id, height, url, width) VALUES (@artist_id, @height, @url, @width) RETURNING artist_image_id;";           
+            pgArtists.ForEach(p => {
+                artists.Where(a => a.Key == p.id).Single().Value.Images.ForEach(i => { 
+                    using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+                    {
+                        artists.ToList().ForEach(artist =>
+                        {
+                            var pgArtistImage = new PgSQL.ArtistImage()
+                            {
+                                artist_id = p.artist_id,
+                                height = i.Height,
+                                url = i.Url,
+                                width = i.Width
+                            };
+                            pgArtistImage.artist_image_id = db.QuerySingle<int>(sqlQuery, pgArtistImage);
+                            pgArtistImages.Add(pgArtistImage);
+                        });
+
+                    }                
+                });
+            });
+            return pgArtists;
+        }
+        static List<PgSQL.Artist> PGLoadAlbums(Dictionary<string, List<SimpleAlbum>> artistAlbums, List<PgSQL.Artist> pgArtists)
+        {
+
+            var pgAlbums = new List<PgSQL.Album>();
+            string sqlQuery;
+            artistAlbums.ToList().ForEach(artist => {
+                artist.Value.ForEach(album => 
+                {
+                    using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+                    {
+                        sqlQuery = "INSERT INTO album(id, album_group, album_type, name, release_date, release_date_precision, total_tracks, type, uri, spotify_url) VALUES (@id, @album_group, @album_type, @name, @release_date, @release_date_precision, @total_tracks, @type, @uri, @spotify_url) RETURNS album_id;";
+                        var pgAlbum = new PgSQL.Album()
+                        {
+                            id = album.Id, 
+                            album_group = album.AlbumGroup, 
+                            album_type = album.AlbumType, 
+                            name = album.Name, 
+                            release_date = album.ReleaseDate, 
+                            release_date_precision = album.ReleaseDatePrecision, 
+                            total_tracks = 1, //TODO: get total tracks
+                            type = album.Type, 
+                            uri = album.Uri, 
+                            spotify_url = album.ExternalUrls.FirstOrDefault().Value
+                        };
+                        pgAlbum.album_id = db.QuerySingle<int>(sqlQuery, pgAlbum);
+                        pgAlbums.Add(pgAlbum);
+
+                        album.Images.ForEach(i => { 
+                            sqlQuery = "INSERT INTO album_image(album_id, height, url, width) VALUES (@album_id, @height, @url, @width) RETURNING album_image_id;";
+                            var pgAlbumImage = new PgSQL.AlbumImage()
+                            {
+                                album_id = pgAlbum.album_id,
+                                height = i.Height,
+                                url = i.Url,
+                                width = i.Width
+                            };
+                        });
+
+
+
+
+
+
+
+                    }
+                    var x = new PgSQL.Album()
+                    {
+
+                    };
+                });
+            });
+                
+                
+                
+            //    .ForEach(p => {
+            //    artists.Where(a => a.Key == p.id).Single().Value.Images.ForEach(i => {
+            //        using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            //        {
+            //            artists.ToList().ForEach(artist =>
+            //            {
+            //                var pgArtistImage = new PgSQL.ArtistImage()
+            //                {
+            //                    artist_id = p.artist_id,
+            //                    height = i.Height,
+            //                    url = i.Url,
+            //                    width = i.Width
+            //                };
+            //                pgArtistImage.artist_image_id = db.QuerySingle<int>(sqlQuery, pgArtistImage);
+            //                pgArtistImages.Add(pgArtistImage);
+            //            });
+
+            //        }
+            //    });
+            //});
+            return pgArtists;
+        }
+
         static List<PgSQL.ChartTrack> PGLoadChartTracks(List<Spotify.ChartTrack> chartTracks, List<PgSQL.Artist> artists, List<PgSQL.Track> tracks, List<FullTrack> fullTracks)
         {
             var query = from chart in chartTracks
@@ -216,6 +323,15 @@ namespace Spotify
             }
             return pgChartTracks;
         }
-
+        //static void PGLoadTrackAudioAnalysis(List<PgSQL.Track> tracks, Dictionary<string, TrackAudioAnalysis> trackAudioAnalysis)
+        //{
+        //    var query = from track in tracks
+        //                join analysys in trackAudioAnalysis on track.id equals analysys.Key
+        //                select new PgSQL.TrackAudioAnalysis()
+        //                {
+        //                    track_id = track.track_id,
+        //                    num_samples = analysys.Value.
+        //                }
+        //}
     }
 }
