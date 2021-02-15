@@ -22,7 +22,6 @@ C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\Sp
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\Spotify.pdb
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\Newtonsoft.Json.dll
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\SpotifyAPI.Web.dll
-C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\obj\Debug\netcoreapp3.1\Spotify.csprojAssemblyReference.cache
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\obj\Debug\netcoreapp3.1\Spotify.AssemblyInfoInputs.cache
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\obj\Debug\netcoreapp3.1\Spotify.AssemblyInfo.cs
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\obj\Debug\netcoreapp3.1\Spotify.csproj.CopyComplete
@@ -58,3 +57,6 @@ C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\ru
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\runtimes\win-x86\native\sni.dll
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\runtimes\unix\lib\netcoreapp2.1\System.Data.SqlClient.dll
 C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\runtimes\win\lib\netcoreapp2.1\System.Data.SqlClient.dll
+C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\SpotifyAPI.Web.pdb
+C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\bin\Debug\netcoreapp3.1\SpotifyAPI.Web.xml
+C:\Users\jmgre\source\repos\spotify.whisperer\Spotify\obj\Debug\netcoreapp3.1\Spotify.csprojAssemblyReference.cache

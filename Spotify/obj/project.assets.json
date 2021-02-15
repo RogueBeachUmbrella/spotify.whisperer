@@ -407,18 +407,6 @@
           }
         }
       },
-      "SpotifyAPI.Web/6.0.0": {
-        "type": "package",
-        "dependencies": {
-          "Newtonsoft.Json": "12.0.3"
-        },
-        "compile": {
-          "lib/netstandard2.1/SpotifyAPI.Web.dll": {}
-        },
-        "runtime": {
-          "lib/netstandard2.1/SpotifyAPI.Web.dll": {}
-        }
-      },
       "System.AppContext/4.3.0": {
         "type": "package",
         "dependencies": {
@@ -1503,6 +1491,19 @@
         "runtime": {
           "lib/netstandard1.3/System.Xml.XDocument.dll": {}
         }
+      },
+      "SpotifyAPI.Web/1.0.0": {
+        "type": "project",
+        "framework": ".NETStandard,Version=v2.1",
+        "dependencies": {
+          "Newtonsoft.Json": "12.0.3"
+        },
+        "compile": {
+          "bin/placeholder/SpotifyAPI.Web.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/SpotifyAPI.Web.dll": {}
+        }
       }
     }
   },
@@ -2141,23 +2142,6 @@
         "runtimes/win-x86/native/sni.dll",
         "useSharedDesignerContext.txt",
         "version.txt"
-      ]
-    },
-    "SpotifyAPI.Web/6.0.0": {
-      "sha512": "wEj3D6aqVt5mhkDoMbeDvVzqL4WyqDzG75hRMnELGCIhWK/ha5XkOpusilanCmd2+NH/fsNjD8W9o7An+p7Weg==",
-      "type": "package",
-      "path": "spotifyapi.web/6.0.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "lib/net5.0/SpotifyAPI.Web.dll",
-        "lib/net5.0/SpotifyAPI.Web.xml",
-        "lib/netstandard2.0/SpotifyAPI.Web.dll",
-        "lib/netstandard2.0/SpotifyAPI.Web.xml",
-        "lib/netstandard2.1/SpotifyAPI.Web.dll",
-        "lib/netstandard2.1/SpotifyAPI.Web.xml",
-        "spotifyapi.web.6.0.0.nupkg.sha512",
-        "spotifyapi.web.nuspec"
       ]
     },
     "System.AppContext/4.3.0": {
@@ -5515,6 +5499,11 @@
         "system.xml.xdocument.4.3.0.nupkg.sha512",
         "system.xml.xdocument.nuspec"
       ]
+    },
+    "SpotifyAPI.Web/1.0.0": {
+      "type": "project",
+      "path": "../../../SpotifyAPI-NET/SpotifyAPI.Web/SpotifyAPI.Web.csproj",
+      "msbuildProject": "../../../SpotifyAPI-NET/SpotifyAPI.Web/SpotifyAPI.Web.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -5523,7 +5512,7 @@
       "Dapper >= 2.0.78",
       "Microsoft.AspNet.WebApi.Client >= 5.2.7",
       "Npgsql >= 5.0.3",
-      "SpotifyAPI.Web >= 6.0.0",
+      "SpotifyAPI.Web >= 1.0.0",
       "System.Configuration.ConfigurationManager >= 5.0.0",
       "System.Data.SqlClient >= 4.8.2"
     ]
@@ -5558,7 +5547,11 @@
       },
       "frameworks": {
         "netcoreapp3.1": {
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\jmgre\\source\\SpotifyAPI-NET\\SpotifyAPI.Web\\SpotifyAPI.Web.csproj": {
+              "projectPath": "C:\\Users\\jmgre\\source\\SpotifyAPI-NET\\SpotifyAPI.Web\\SpotifyAPI.Web.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
@@ -5586,10 +5579,6 @@
             "target": "Package",
             "version": "[5.0.3, )"
           },
-          "SpotifyAPI.Web": {
-            "target": "Package",
-            "version": "[6.0.0, )"
-          },
           "System.Configuration.ConfigurationManager": {
             "target": "Package",
             "version": "[5.0.0, )"
@@ -5614,7 +5603,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.405\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.406\\RuntimeIdentifierGraph.json"
       }
     }
   }
