@@ -19,5 +19,10 @@ namespace Spotify
 		public string uri { get; set; }
 		public string spotify_url { get; set; }
 		public List<Track> tracks { get; set; }
+
+		public Album()
+        {
+			tracks = new List<Track>();
+        }
 	}
 }

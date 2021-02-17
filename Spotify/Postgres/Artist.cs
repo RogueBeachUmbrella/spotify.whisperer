@@ -19,5 +19,13 @@ namespace Spotify
 		public List<ArtistImage> images { get; set; }
 		public List<RelatedArtist> relatedArtists { get; set; }
 		public List<Album> albums { get; set; }
+
+		public Artist()
+        {
+			genres = new List<ArtistGenre>();
+			images = new List<ArtistImage>();
+			relatedArtists = new List<RelatedArtist>();
+			albums = new List<Album>();
+        }
 	}
 }

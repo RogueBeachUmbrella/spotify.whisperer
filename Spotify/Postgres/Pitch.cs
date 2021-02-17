@@ -2,7 +2,7 @@
 
 namespace Spotify
 {
-    public class TrackSegmentPitch
+    public class Pitch
 	{
 		public int track_segment_pitch_id { get; set; }
 		public DateTime? created_at { get; set; }

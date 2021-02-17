@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Spotify
 {
@@ -15,7 +16,12 @@ namespace Spotify
 		public decimal loudness_max_time { get; set; }
 		public decimal loudness_max { get; set; }
 		public decimal loudness_end { get; set; }
+		public List<Pitch> pitches { get; set; }
+		public List<Timbre> timbres { get; set; }
+		public TrackSegment()
+		{
+			pitches = new List<Pitch>();
+			timbres = new List<Timbre>();
+		}
 	}
-
-	
 }

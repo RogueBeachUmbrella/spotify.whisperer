@@ -5,7 +5,7 @@ using System.Text;
 namespace Spotify
 {
 
-    public class TrackSegmentTimbre
+    public class Timbre
 	{
 		public int track_segment_timbre_id { get; set; }
 		public DateTime? created_at { get; set; }

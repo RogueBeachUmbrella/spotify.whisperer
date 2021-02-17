@@ -21,8 +21,9 @@ namespace Spotify
 		public decimal mode_confidence { get; set; }
 		public int time_signature { get; set; }
 		public decimal time_signature_confidence { get; set; }
-		public List<TrackSegmentPitch> pitches { get; set; }
-		public List<TrackSegmentTimbre> timbres { get; set; }
+
+
+
 	}
 
 	

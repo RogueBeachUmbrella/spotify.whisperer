@@ -2,7 +2,7 @@
 
 namespace Spotify
 {
-    public class TrackFeature
+    public class TrackFeatures
 		{
 			public int track_feature_id { get; set; }
 			public DateTime? created_at { get; set; }

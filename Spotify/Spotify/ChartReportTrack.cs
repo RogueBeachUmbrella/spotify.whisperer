@@ -21,6 +21,12 @@ namespace Spotify
         [Name("URL")]
         public string url { get; set; }
 
-        public string id { get { return url.Replace(@"https://open.spotify.com/track/", ""); } }
+        public string spotifyTrackId { get { return url.Replace(@"https://open.spotify.com/track/", ""); } }
+        public List<string> spotifyArtistIds { get; set; }
+
+        public ChartReportTrack()
+        {
+            spotifyArtistIds = new List<string>();
+        }
     }
 }

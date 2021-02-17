@@ -28,27 +28,29 @@ namespace Spotify
             var spotify = new Spotify();
             var postgres = new Postgres();
 
-            var chartTracks = spotify.GetChartTracks();
-            var tracks = spotify.GetTracks(chartTracks.Select(ct => ct.id).ToList());
-            var artists = spotify.GetTrackArtists(tracks);
+            
+            var (chartTracks, artists, chartReport) = spotify.GetChartData(spotify.GetChartTracks());
+
+            //artists = spotify.GetArtistRelatedArtists(artists);
+            //artists = spotify.GetArtistAlbums(artists);
+
+            //var albumTracks = new List<Track>();
+
+            //(artists, albumTracks) = spotify.GetArtistAlbumTracks(artists);           
+
+            //chartTracks = spotify.GetTrackAudioFeatures(chartTracks);
+            //chartTracks = spotify.GetTrackAudioAnalysis(chartTracks);     
+
+            //albumTracks = spotify.GetTrackAudioFeatures(albumTracks);
+            //albumTracks = spotify.GetTrackAudioAnalysis(albumTracks);    
 
 
-            var relatedArtists = spotify.GetArtistRelatedArtists(artists);
-            var artistAlbums = spotify.GetArtistAlbums(artists);
-            var albumTracks = spotify.GetAlbumTracks(artistAlbums);
-
-            spotify.JoinArtistData(artists, relatedArtists, artistAlbums, albumTracks);
-
-
-            //var pgTracks = PGLoadTracks(tracks);
-            //var pgArtists = PGLoadArtists(artists);
+            //chartTracks = spotify.UpdateChartReportTrackArtistId(tracks, chartTracks);
+            //var SpotifyArtists = spotify.GetTrackArtists(tracks);
+            //spotify.JoinArtistData(SpotifyArtists, spotifyRelatedArtists, spotifyArtistAlbums, spotifyAlbumTracks);
+            chartTracks = Postgres.LoadTracks(chartTracks);
+            artists = Postgres.LoadArtists(artists);
             //var pgChartTracks = PGLoadChartTracks(chartTracks, pgArtists, pgTracks, tracks);
-
-
-
-            var trackAudioFeatures = spotify.GetTrackAudioFeatures(chartTracks);
-            var trackAudioAnalysis = spotify.GetTrackAudioAnalysis(chartTracks);
-
         }
     }
 }
