@@ -29,14 +29,19 @@ namespace Spotify
             var postgres = new Postgres();
 
             
-            var (chartTracks, artists, chartReport) = spotify.GetChartData(spotify.GetChartTracks());
+            var (artists, chartReport) = spotify.GetChartData(spotify.GetChartTracks());
 
             //artists = spotify.GetArtistRelatedArtists(artists);
-            //artists = spotify.GetArtistAlbums(artists);
+            artists = spotify.GetArtistAlbums(artists);
 
-            //var albumTracks = new List<Track>();
+            var albumTracks = new List<Track>();
+            (artists, albumTracks) = spotify.GetArtistAlbumTracks(artists);
 
-            //(artists, albumTracks) = spotify.GetArtistAlbumTracks(artists);           
+            artists = spotify.GetTrackAudioFeatures(artists);
+            artists = spotify.GetTrackAudioAnalysis(artists);     
+
+
+            //tracks.AddRange(albumTracks);
 
             //chartTracks = spotify.GetTrackAudioFeatures(chartTracks);
             //chartTracks = spotify.GetTrackAudioAnalysis(chartTracks);     
@@ -48,8 +53,10 @@ namespace Spotify
             //chartTracks = spotify.UpdateChartReportTrackArtistId(tracks, chartTracks);
             //var SpotifyArtists = spotify.GetTrackArtists(tracks);
             //spotify.JoinArtistData(SpotifyArtists, spotifyRelatedArtists, spotifyArtistAlbums, spotifyAlbumTracks);
-            chartTracks = Postgres.LoadTracks(chartTracks);
+
             artists = Postgres.LoadArtists(artists);
+            //tracks = Postgres.LoadTracks(tracks);
+
             //var pgChartTracks = PGLoadChartTracks(chartTracks, pgArtists, pgTracks, tracks);
         }
     }

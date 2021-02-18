@@ -35,11 +35,15 @@ namespace Spotify
 		public decimal synch_version { get; set; }
 		public string rhythmtext { get; set; }
 		public decimal rhythm_version { get; set; }
+		public List<TrackBar> bars { get; set; }
+		public List<TrackBeat> beats { get; set; }
 		public List<TrackSection> sections { get; set; }
 		public List<TrackSegment> segments { get; set; }
 		public List<TrackTatum> tatums { get; set; }
 		public TrackAudioAnalysis()
         {
+			bars = new List<TrackBar>();
+			beats = new List<TrackBeat>();
 			sections = new List<TrackSection>();
 			segments = new List<TrackSegment>();
 			tatums = new List<TrackTatum>();

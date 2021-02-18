@@ -18,7 +18,7 @@ namespace Spotify
 		public string uri { get; set; }
 		public string spotify_url { get; set; }
 		public string id { get; set; }
-		public string spotifyAlbumId { get; set; }
+		public int disc_number { get; set; }
 		public TrackFeatures features { get; set; }
 		public TrackAudioAnalysis audioAnalysis { get; set; }
 	}
