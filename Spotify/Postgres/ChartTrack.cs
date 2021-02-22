@@ -12,7 +12,19 @@ namespace Spotify
 		public int position { get; set; }
 		public int streams { get; set; }
 		public string country { get; set; }
-		public DateTime week_start { get; set; }
-		public DateTime week_end { get; set; }
+		public string week_start { get; set; }
+		public string week_end { get; set; }
+
+		private string spotifyTrackId { get; set; }
+		private string spotifyArtistId { get; set; }
+
+		public void SetSpotifyTrackId(string id)
+        {
+			spotifyTrackId = id;
+		}
+		public void SetSpotifyArtistId(string id)
+        {
+			spotifyArtistId = id;
+		}
 	}	
 }

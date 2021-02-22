@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Spotify
 {
-    public class TrackAudioAnalysis
+    public class AudioAnalysis
 	{
 		public int track_audio_analysis_id { get; set; }
 		public DateTime? created_at { get; set; }
@@ -40,7 +40,7 @@ namespace Spotify
 		public List<TrackSection> sections { get; set; }
 		public List<TrackSegment> segments { get; set; }
 		public List<TrackTatum> tatums { get; set; }
-		public TrackAudioAnalysis()
+		public AudioAnalysis()
         {
 			bars = new List<TrackBar>();
 			beats = new List<TrackBeat>();

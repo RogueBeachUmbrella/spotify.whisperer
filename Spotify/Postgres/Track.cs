@@ -20,7 +20,8 @@ namespace Spotify
 		public string id { get; set; }
 		public int disc_number { get; set; }
 		public TrackFeatures features { get; set; }
-		public TrackAudioAnalysis audioAnalysis { get; set; }
+		public AudioAnalysis audioAnalysis { get; set; }
+
 	}
 
 	
