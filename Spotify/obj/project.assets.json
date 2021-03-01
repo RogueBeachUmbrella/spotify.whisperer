@@ -5524,11 +5524,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj",
+      "projectUniqueName": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer.v1\\Spotify\\Spotify.csproj",
       "projectName": "Spotify",
-      "projectPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj",
+      "projectPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer.v1\\Spotify\\Spotify.csproj",
       "packagesPath": "C:\\Users\\jmgre\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\obj\\",
+      "outputPath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer.v1\\Spotify\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Microsoft\\Xamarin\\NuGet\\"

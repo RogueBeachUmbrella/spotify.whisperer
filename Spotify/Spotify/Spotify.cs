@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Spotify.SpotifyModels;
 
 namespace Spotify
 {
@@ -53,36 +54,59 @@ namespace Spotify
             //return chartTracks.ToList();
             return chartTracks.GetRange(1, 1);
         }
-        public (List<Artist>, List<ChartTrack>) GetChartData(List<ChartReportTrack> chartReportTracks, string countryCode, DateTime weekStart, DateTime weekEnd)
+        public (Dictionary<string, SpotifyModels.Track> tracks, Dictionary<string, SpotifyModels.Artist> artists, Dictionary<string, SpotifyModels.Album> albums, List<ChartTrack> chartTracks) GetChartData(List<ChartReportTrack> chartReportTracks, string countryCode, DateTime weekStart, DateTime weekEnd)
         {
-            var trackIds = chartReportTracks.Select(r => r.id).ToList();
-            var artists = new List<Artist>();
+            var tracks = new Dictionary<string, SpotifyModels.Track>();
+            var artists = new Dictionary<string, SpotifyModels.Artist>();
+            var albums = new Dictionary<string, SpotifyModels.Album>();
             var chartTracks = new List<ChartTrack>();
+
             for (int i = 0; i < chartReportTracks.Count; i += (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i))
             {
                 var request = new TracksRequest(chartReportTracks.Select(x => x.id).ToList().GetRange(i, (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i)));
                 var tracksResponse = client.Tracks.GetSeveral(request).Result.Tracks;
                 tracksResponse.ForEach(track => 
                 {
+                    tracks.TryAdd(track.Id,
+                                  new SpotifyModels.Track() { 
+                                      Id = track.Id, 
+                                      //AlbumId = track.Album.Id, 
+                                      //ArtistIds = track.Artists.Select(a => a.Id).ToList(), 
+                                      DiscNumber = track.DiscNumber, 
+                                      DurationMs = track.DurationMs, 
+                                      Explicit = track.Explicit, 
+                                      ExternalUrl = track.ExternalUrls.FirstOrDefault().Value, 
+                                      Href = track.Href, 
+                                      Name = track.Name, 
+                                      Popularity = track.Popularity, 
+                                      PreviewUrl = track.PreviewUrl, 
+                                      TrackNumber = track.TrackNumber 
+                                  });
+
+
                     track.Artists.ForEach(a => { 
-                        var artist = new Artist() { 
-                            id = a.Id,
-                            name = a.Name,
-                            type = a.Type,
-                            uri = a.Uri,
-                            spotify_url = a.ExternalUrls.Values.FirstOrDefault()
-                        };                                                
-                        artist.albums.Add(new Album()
+                        artists.TryAdd(a.Id, new SpotifyModels.Artist() { 
+                            Id = a.Id,
+                            Name = a.Name,
+                            Type = a.Type,
+                            Uri = a.Uri,
+                            ExternalUrl = a.ExternalUrls.Values.FirstOrDefault(),
+                            Href = a.Href
+                        });     
+                        
+                        albums.TryAdd(a.Id, new SpotifyModels.Album()
                         {
-                            id = track.Album.Id,
-                            album_group = track.Album.AlbumGroup,
-                            album_type = track.Album.AlbumType,
-                            name = track.Album.Name,
-                            release_date = track.Album.ReleaseDate,
-                            release_date_precision = track.Album.ReleaseDatePrecision,
-                            type = track.Album.Type,
-                            uri = track.Album.Uri,
-                            spotify_url = track.Album.ExternalUrls.FirstOrDefault().Value
+                            Id = track.Album.Id,
+                            AlbumType = track.Album.AlbumType,
+                            Name = track.Album.Name,
+                            ReleaseDate = track.Album.ReleaseDate,
+                            ReleaseDatePrecision = track.Album.ReleaseDatePrecision,
+                            Type = track.Album.Type,
+                            Uri = track.Album.Uri,
+                            ExternalUrl = track.Album.ExternalUrls.FirstOrDefault().Value,
+                            Href = track.Album.Href,
+                            Images = track.Album.Images,
+                            Artists = track.Album.Artists.Select(a => a.Id).ToList(),
                         });
 
                         var chartTrack = new ChartTrack()
@@ -93,68 +117,64 @@ namespace Spotify
                             week_start = weekStart.ToString("yyyy-MM-dd"),
                             week_end = weekEnd.ToString("yyyy-MM-dd")
                         };
-                        chartTrack.SetSpotifyArtistId(artist.id);
-                        chartTrack.SetSpotifyTrackId(track.Id);
-                        artist.chartTracks.Add(chartTrack);
-                        artists.Add(artist);
                     });                   
                 });             
             }
 
-            var artistIds = artists.Select(a => a.id).Distinct().ToList();
+            return (tracks, artists, albums, chartTracks);
+        }
+        public List<FullArtist> GetSeveralArtistsFull(List<string> artistIds)
+        {
+            var artists = new List<FullArtist>();
             for (int i = 0; i < artistIds.Count; i += (artistIds.Count - i) >= 50 ? 50 : (artistIds.Count - i))
             {
-                var artistsResponse = client.Artists.GetSeveral(new ArtistsRequest(artistIds.GetRange(i, ((artistIds.Count - i) < 50 ? (artistIds.Count - i) : 50)))).Result.Artists;
-                artistsResponse.ForEach(a => {
-
-                    artists.Where(artist => artist.id == a.Id).ToList().ForEach(x => x.followers = a.Followers.Total);
-                    artists.Where(artist => artist.id == a.Id).ToList().ForEach(x => x.popularity = a.Popularity);
-
-                    a.Images.ForEach(img => {
-                        var image = new ArtistImage()
-                        {
-                            url = img.Url,
-                            height = img.Height,
-                            width = img.Width
-                        };
-                        artists.Where(artist => artist.id == a.Id).ToList().ForEach(x => x.images.Add(image));
-                    });
-
-                    a.Genres.ForEach(g => {
-                        artists.Where(artist => artist.id == a.Id).ToList().ForEach(x => x.genres.Add(new ArtistGenre() { genre = g }));
-                    });
-                });
+                artists.AddRange(client.Artists.GetSeveral(new ArtistsRequest(artistIds.GetRange(i, ((artistIds.Count - i) < 50 ? (artistIds.Count - i) : 50)))).Result.Artists);
             }
-            return (artists, chartTracks);
+            return artists;
         }
-         public void GetArtistAlbums(ref Artist artist) //TODO: Call album endpoint?
+        public List<SimpleAlbum> GetArtistAlbums(List<string> artistIds) //TODO: Call album endpoint?
         {          
-            var albums = new List<Album>();
+            var albums = new List<SimpleAlbum>();
             try
             {
-                var response = client.Artists.GetAlbums(artist.id, new ArtistsAlbumsRequest() { IncludeGroupsParam = ArtistsAlbumsRequest.IncludeGroups.Album }).Result.Items;
-                response.ForEach(a => {
-                    var album = new Album()
-                    {
-                        id = a.Id,
-                        album_group = a.AlbumGroup,
-                        album_type = a.AlbumType,
-                        name = a.Name,
-                        release_date = a.ReleaseDate,
-                        release_date_precision = a.ReleaseDatePrecision,
-                        type = a.Type,
-                        uri = a.Uri,
-                        spotify_url = a.ExternalUrls.FirstOrDefault().Value
-                    };
-                    albums.Add(album);
+                artistIds.ForEach(id => { 
+                    var response = client.Artists.GetAlbums(id, new ArtistsAlbumsRequest() { IncludeGroupsParam = ArtistsAlbumsRequest.IncludeGroups.Album }).Result.Items;
+                    
+                    
+                    response.ForEach(a => {
+                        //var album = new Album()
+                        //{
+                        //    id = a.Id,
+                        //    album_group = a.AlbumGroup,
+                        //    album_type = a.AlbumType,
+                        //    name = a.Name,
+                        //    release_date = a.ReleaseDate,
+                        //    release_date_precision = a.ReleaseDatePrecision,
+                        //    type = a.Type,
+                        //    uri = a.Uri,
+                        //    spotify_url = a.ExternalUrls.FirstOrDefault().Value
+                        //};
+                        albums.Add(a);
+                    });         
                 });
-                artist.albums = albums;
             }
             catch(Exception ex)
             {
 
             }
-        }       
+            return albums;
+        }            
+        public List<FullAlbum> GetFullAlbums(List<string> ids)
+        {
+            var fullAlbums = new List<FullAlbum>();
+            for (int i = 0; i < ids.Count; i += (ids.Count - i) >= 20 ? 20 : (ids.Count - i))
+            {
+                var response = client.Albums.GetSeveral(new AlbumsRequest(ids.GetRange(i, (ids.Count - i) < 20 ? (ids.Count - i) : 20))).Result;
+                fullAlbums.AddRange(response.Albums);
+            }
+            return fullAlbums;
+        }
+
         public void GetArtistAlbumTracks(ref Artist artist)
         {
             var ids = new List<string>();
@@ -216,24 +236,24 @@ namespace Spotify
                         var result = client.Tracks.GetAudioAnalysis(t.id).Result;
                         track.audioAnalysis = new AudioAnalysis()
                         {
-                            num_samples = result.Track.num_samples,
-                            duration = (decimal)result.Track.duration,
-                            sample_md5 = result.Track.sample_md5,
-                            offset_seconds = result.Track.offset_seconds,
-                            window_seconds = result.Track.window_seconds,
-                            analysis_sample_rate = result.Track.analysis_sample_rate,
-                            analysis_channels = result.Track.analysis_channels,
-                            end_of_fade_in = (decimal)result.Track.end_of_fade_in,
-                            start_of_fade_out = (decimal)result.Track.start_of_fade_out,
-                            loudness = (decimal)result.Track.loudness,
-                            tempo = (decimal)result.Track.tempo,
-                            tempo_confidence = (decimal)result.Track.tempo_confidence,
-                            time_signature = result.Track.time_signature,
-                            time_signature_confidence = (decimal)result.Track.time_signature_confidence,
-                            key = result.Track.key,
-                            key_confidence = (decimal)result.Track.key_confidence,
-                            mode = result.Track.mode,
-                            mode_confidence = (decimal)result.Track.mode_confidence
+                            num_samples = result.Analysis.num_samples,
+                            duration = (decimal)result.Analysis.duration,
+                            sample_md5 = result.Analysis.sample_md5,
+                            offset_seconds = result.Analysis.offset_seconds,
+                            window_seconds = result.Analysis.window_seconds,
+                            analysis_sample_rate = result.Analysis.analysis_sample_rate,
+                            analysis_channels = result.Analysis.analysis_channels,
+                            end_of_fade_in = (decimal)result.Analysis.end_of_fade_in,
+                            start_of_fade_out = (decimal)result.Analysis.start_of_fade_out,
+                            loudness = (decimal)result.Analysis.loudness,
+                            tempo = (decimal)result.Analysis.tempo,
+                            tempo_confidence = (decimal)result.Analysis.tempo_confidence,
+                            time_signature = result.Analysis.time_signature,
+                            time_signature_confidence = (decimal)result.Analysis.time_signature_confidence,
+                            key = result.Analysis.key,
+                            key_confidence = (decimal)result.Analysis.key_confidence,
+                            mode = result.Analysis.mode,
+                            mode_confidence = (decimal)result.Analysis.mode_confidence
                         };
                         result.Bars.ForEach(b => {
                             var bar = new TrackBar()
@@ -300,7 +320,19 @@ namespace Spotify
                 });
                 album.tracks.Add(track);
             });
-        }   
+        }
+        public List<TrackAudioFeatures> GetAudioFeatures(List<string> ids)
+        {
+            var trackFeatures = new List<TrackAudioFeatures>();
+            for (int i = 0; i < ids.Count; i += (ids.Count - i) >= 50 ? 50 : (ids.Count - i))
+            {
+                var request = new TracksAudioFeaturesRequest(ids.GetRange(i, (ids.Count - i) >= 50 ? 50 : (ids.Count - i)));
+                var response = client.Tracks.GetSeveralAudioFeatures(request).Result;
+
+                trackFeatures.AddRange(response.AudioFeatures.ToList());
+            }
+            return trackFeatures;
+        }
         public void GetTrackAudioFeatures(ref Artist artist)
         {
             var ids = new List<string>();

@@ -35,34 +35,57 @@ namespace Spotify
 
             var chartReport = spotify.GetChartTracks(countryCode, weekStart, weekEnd);
             
-            var (artists, chartTracks) = spotify.GetChartData(chartReport, countryCode, weekStart, weekEnd);
+            var (tracks, artists, albums, chartTracks) = spotify.GetChartData(chartReport, countryCode, weekStart, weekEnd);
 
+
+
+            spotify.RefreshToken();
+
+            //Get full artist 
+            var fullArtists = spotify.GetSeveralArtistsFull(artists.Keys.ToList());
+
+            //Get albums
+            var fullAlbums = spotify.GetFullAlbums(spotify.GetArtistAlbums(artists.Keys.ToList()).Select(a => a.Id).ToList());
+
+            var trackIds = fullAlbums.
+            var trackFeatures = spotify.GetAudioFeatures(trackIds);
+            
             
 
 
-            artists.ForEach(artist => {
-                spotify.RefreshToken();
-
-                artist.GetAlbums(spotify.client);
-                artist.GetAlbumTracks(spotify.client);
-                artist.GetAlbumTracksAudioFeatures(spotify.client);
-                artist.GetAlbumTracksAudioAnalysis(spotify.client);
-
-                var i = 1;
-
-                //artist.albums.ForEach(album => {
-                //    album.GetTracks(spotify.client);
-                //});
 
 
-                //spotify.GetArtistAlbums(ref artist);
-                //spotify.GetArtistAlbumTracks(ref artist);
-                //spotify.GetTrackAudioFeatures(ref artist);
-                //spotify.GetTrackAudioAnalysis(ref artist);
-                postgres.LoadArtist(artist);            
-            });
 
-            
+
+
+            //fullArtists.ForEach(a => { artists.TryGetValue(});
+
+
+            //artists.ForEach(artist => {
+            //    spotify.RefreshToken();
+
+            //    spotify.GetSeveralArtistsFull()
+
+            //    artist.GetAlbums(spotify.client);
+            //    artist.GetAlbumTracks(spotify.client);
+            //    artist.GetAlbumTracksAudioFeatures(spotify.client);
+            //    artist.GetAlbumTracksAudioAnalysis(spotify.client);
+
+            //    var i = 1;
+
+            //    //artist.albums.ForEach(album => {
+            //    //    album.GetTracks(spotify.client);
+            //    //});
+
+
+            //    //spotify.GetArtistAlbums(ref artist);
+            //    //spotify.GetArtistAlbumTracks(ref artist);
+            //    //spotify.GetTrackAudioFeatures(ref artist);
+            //    //spotify.GetTrackAudioAnalysis(ref artist);
+            //    postgres.LoadArtist(artist);            
+            //});
+
+
 
 
             //tracks.AddRange(albumTracks);

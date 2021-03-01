@@ -87,24 +87,24 @@ namespace Spotify
         {
             var audioAnalysis = new AudioAnalysis()
             {
-                num_samples = trackAudioAnalysis.Track.num_samples,
-                duration = (decimal)trackAudioAnalysis.Track.duration,
-                sample_md5 = trackAudioAnalysis.Track.sample_md5,
-                offset_seconds = trackAudioAnalysis.Track.offset_seconds,
-                window_seconds = trackAudioAnalysis.Track.window_seconds,
-                analysis_sample_rate = trackAudioAnalysis.Track.analysis_sample_rate,
-                analysis_channels = trackAudioAnalysis.Track.analysis_channels,
-                end_of_fade_in = (decimal)trackAudioAnalysis.Track.end_of_fade_in,
-                start_of_fade_out = (decimal)trackAudioAnalysis.Track.start_of_fade_out,
-                loudness = (decimal)trackAudioAnalysis.Track.loudness,
-                tempo = (decimal)trackAudioAnalysis.Track.tempo,
-                tempo_confidence = (decimal)trackAudioAnalysis.Track.tempo_confidence,
-                time_signature = trackAudioAnalysis.Track.time_signature,
-                time_signature_confidence = (decimal)trackAudioAnalysis.Track.time_signature_confidence,
-                key = trackAudioAnalysis.Track.key,
-                key_confidence = (decimal)trackAudioAnalysis.Track.key_confidence,
-                mode = trackAudioAnalysis.Track.mode,
-                mode_confidence = (decimal)trackAudioAnalysis.Track.mode_confidence
+                num_samples = trackAudioAnalysis.Analysis.num_samples,
+                duration = (decimal)trackAudioAnalysis.Analysis.duration,
+                sample_md5 = trackAudioAnalysis.Analysis.sample_md5,
+                offset_seconds = trackAudioAnalysis.Analysis.offset_seconds,
+                window_seconds = trackAudioAnalysis.Analysis.window_seconds,
+                analysis_sample_rate = trackAudioAnalysis.Analysis.analysis_sample_rate,
+                analysis_channels = trackAudioAnalysis.Analysis.analysis_channels,
+                end_of_fade_in = (decimal)trackAudioAnalysis.Analysis.end_of_fade_in,
+                start_of_fade_out = (decimal)trackAudioAnalysis.Analysis.start_of_fade_out,
+                loudness = (decimal)trackAudioAnalysis.Analysis.loudness,
+                tempo = (decimal)trackAudioAnalysis.Analysis.tempo,
+                tempo_confidence = (decimal)trackAudioAnalysis.Analysis.tempo_confidence,
+                time_signature = trackAudioAnalysis.Analysis.time_signature,
+                time_signature_confidence = (decimal)trackAudioAnalysis.Analysis.time_signature_confidence,
+                key = trackAudioAnalysis.Analysis.key,
+                key_confidence = (decimal)trackAudioAnalysis.Analysis.key_confidence,
+                mode = trackAudioAnalysis.Analysis.mode,
+                mode_confidence = (decimal)trackAudioAnalysis.Analysis.mode_confidence
             };
             trackAudioAnalysis.Bars.ForEach(b => {
                 var bar = new TrackBar()

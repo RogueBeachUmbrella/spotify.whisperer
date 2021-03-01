@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "7AQUoh1MeSncu9uz2493gsoDCpyXlyn3xYSdU7iJi6Dki6U2WBXGgGZA9/XOoeIfdgXI79ilP3XFgTAr+3ZYKQ==",
+  "dgSpecHash": "SqtB2TuXCayuVjZHacxYCKBCT7E48RhAPo5ZqWEScuwqHMHtwArXs7ITyrc/F6XckhQfCn2jKmUEmTrRKZ3jKA==",
   "success": true,
-  "projectFilePath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer\\Spotify\\Spotify.csproj",
+  "projectFilePath": "C:\\Users\\jmgre\\source\\repos\\spotify.whisperer.v1\\Spotify\\Spotify.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\jmgre\\.nuget\\packages\\csvhelper\\22.1.2\\csvhelper.22.1.2.nupkg.sha512",
     "C:\\Users\\jmgre\\.nuget\\packages\\dapper\\2.0.78\\dapper.2.0.78.nupkg.sha512",
