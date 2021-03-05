@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Spotify
+namespace Postgres
 {
     public class Track
 	{
@@ -19,8 +19,8 @@ namespace Spotify
 		public string spotify_url { get; set; }
 		public string id { get; set; }
 		public int disc_number { get; set; }
-		public TrackFeatures features { get; set; }
-		public AudioAnalysis audioAnalysis { get; set; }
+		//public TrackFeatures features { get; set; }
+		//public AudioAnalysis audioAnalysis { get; set; }
 
 	}
 

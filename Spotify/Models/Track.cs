@@ -17,8 +17,8 @@ namespace Spotify.SpotifyModels
         public int Popularity { get; set; }
         public string PreviewUrl { get; set; } = default!;
         public int TrackNumber { get; set; }
-        public TrackAudioAnalysis audioAnalysis { get; set; }
-        public List<AudioFeature> audioFeatures { get; set; }
+        public AudioFeature audioFeatures { get; set; }
+        public AudioAnalysis audioAnalysis { get; set; }
     }
     public class AudioFeature
     {
@@ -27,7 +27,6 @@ namespace Spotify.SpotifyModels
         public float Danceability { get; set; }
         public int DurationMs { get; set; }
         public float Energy { get; set; }
-        public string Id { get; set; } = default!;
         public float Instrumentalness { get; set; }
         public int Key { get; set; }
         public float Liveness { get; set; }
@@ -41,7 +40,7 @@ namespace Spotify.SpotifyModels
         public string Uri { get; set; } = default!;
         public float Valence { get; set; }
     }
-    public class TrackAudioAnalysis
+    public class AudioAnalysis
     {
         public Meta Meta { get; set; } = default!;
         public Analysis Analysis { get; set; } = default!;
@@ -81,6 +80,10 @@ namespace Spotify.SpotifyModels
         public double key_confidence { get; set; }
         public int mode { get; set; }
         public double mode_confidence { get; set; }
+        public Analysis()
+        {
+
+        }
     }
     public class TimeInterval
     {
