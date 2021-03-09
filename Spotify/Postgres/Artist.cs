@@ -13,7 +13,7 @@ namespace Postgres
 		public DateTime? modified_at { get; set; }
 		public string id { get; set; }
 		public string name { get; set; }
-		public int popularity { get; set; }
+		public int? popularity { get; set; }
 		public string type { get; set; }
 		public string uri { get; set; }
 		public int followers { get; set; }

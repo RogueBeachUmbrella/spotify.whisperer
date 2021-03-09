@@ -35,7 +35,7 @@ namespace Spotify
         }
         public List<ChartReportTrack> GetChartTracks(string countryCode, DateTime weekStart, DateTime weekEnd, int index = 0, int range = 0)
         {
-            //var url = @"https://spotifycharts.com/regional/us/weekly/2021-02-05--2021-02-12/download";
+            var url = @"https://spotifycharts.com/regional/us/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/gb/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/ae/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/br/weekly/2021-02-05--2021-02-12/download";
@@ -44,7 +44,8 @@ namespace Spotify
             //var url = @"https://spotifycharts.com/regional/ma/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/ni/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/au/weekly/2021-02-05--2021-02-12/download";
-            var url = @"https://spotifycharts.com/regional/jp/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/jp/weekly/2021-02-05--2021-02-12/download";
+
 
 
 
@@ -105,79 +106,19 @@ namespace Spotify
                 var albums = tracksResponse.Select(t => t.Album);
                 var tracks = tracksResponse.GroupBy(t => t.Album.Id);
 
-
-                //var q = from album in albums
-                //        select new Album()
-                //        {
-                //            Id = album.Id,
-                //            Tracks = (from track in tracksResponse 
-                //                      where album.Id == track.Album.Id
-                //                      select new SpotifyModels.Track()
-                //                      {
-                //                          Id = track.Id
-                //                      }).ToList()
-                //        };
-
-
-                //q.ToList();
-
-
                 artistsx = (from artist in artists
-                           select new SpotifyModels.Artist()
-                           {
-                               Id = artist.Id,
-                               Name = artist.Name,
-                               Type = artist.Type,
-                               Uri = artist.Uri,
-                               ExternalUrl = artist.ExternalUrls.Values.FirstOrDefault(),
-                               Href = artist.Href,
-                               albums = (from album in tracksResponse.FindAll(a => a.Artists.Where(a => a.Id == artist.Id).Any()).Select(album => album.Album)
-                                             //.Select(t => t.Album)
-
-                                             //.Where(a => a.Artists.Where(b => b.Id == artist.Id).Select(album =>  new SpotifyModels.Album()
-                                             //{
-                                             //    Id = album.Id,
-                                             //    AlbumType = album.AlbumType,
-                                             //    Name = album.Name,
-                                             //    ReleaseDate = album.ReleaseDate,
-                                             //    ReleaseDatePrecision = album.ReleaseDatePrecision,
-                                             //    Type = album.Type,
-                                             //    Uri = album.Uri,
-                                             //    ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
-                                             //    Href = album.Href,
-                                             //    Images = album.Images
-                                             //})
-                                             //.Album.Artists.Where(a => a.Id == artist.Id).Any() //on artist.Id equals fullTracks.Artists.Select(a => a.Id).First()
-                                             //where album.Artists.Where(a => a.Id == artist.Id).Any()
-
-                                         select new SpotifyModels.Album()
-                                         {
-                                             Id = album.Id,
-                                             AlbumType = album.AlbumType,
-                                             Name = album.Name,
-                                             ReleaseDate = album.ReleaseDate,
-                                             ReleaseDatePrecision = album.ReleaseDatePrecision,
-                                             Type = album.Type,
-                                             Uri = album.Uri,
-                                             ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
-                                             Href = album.Href,
-                                             Images = album.Images
-                                             //Tracks = (from track in tracksResponse.Where(t => album.Id == t.Album.Id)
-                                             //          select new SpotifyModels.Track()
-                                             //          {
-                                             //              DiscNumber = track.DiscNumber,
-                                             //              DurationMs = track.DurationMs,
-                                             //              Explicit = track.Explicit,
-                                             //              ExternalUrl = track.ExternalUrls.FirstOrDefault().Value,
-                                             //              Href = track.Href,
-                                             //              Id = track.Id,
-                                             //              Name = track.Name,
-                                             //              Popularity = track.Popularity,
-                                             //              PreviewUrl = track.PreviewUrl,
-                                             //              TrackNumber = track.TrackNumber
-                                             //          }).Distinct().ToList()
-
-                                         }).ToList()
+                            select new SpotifyModels.Artist()
+                            {
+                                Id = artist.Id,
+                                Name = artist.Name,
+                                Type = artist.Type,
+                                Uri = artist.Uri,
+                                ExternalUrl = artist.ExternalUrls.Values.FirstOrDefault(),
+                                albums = (from album in tracksResponse
+                                                        .FindAll(a => a.Artists
+                                                        .Where(a => a.Id == artist.Id)
+                                                        .Any())
+                                          select album.Id).ToList()
                            }).Distinct().ToList();
 
                 tracksResponse.ForEach(track =>
@@ -193,7 +134,6 @@ namespace Spotify
                 });          
             }
 
-            //return (artists.Select(a => a.Key).ToList(), albums.Select(a => a.Key).ToList(), chartTracks);
             return (artistsx , chartTracks);
         }
         public List<FullArtist> GetSeveralArtistsFull(List<string> artistIds)
@@ -235,7 +175,6 @@ namespace Spotify
             return fullAlbums;
         }
 
-
         public List<TrackAudioFeatures> GetAudioFeatures(List<string> ids)
         {
             var trackFeatures = new List<TrackAudioFeatures>();
@@ -249,13 +188,14 @@ namespace Spotify
             return trackFeatures;
         }
 
-        public Dictionary<string, TrackAudioAnalysis> GetTrackAudioAnalysis(List<string> ids)
+        public List<TrackAudioAnalysis> GetTrackAudioAnalysis(List<string> ids)
         {
-            var analysis = new Dictionary<string, TrackAudioAnalysis>();
-            ids.GetRange(0, 1).ForEach(track =>
+            var analysis = new List<TrackAudioAnalysis>();
+            ids.ForEach(id =>
             {
-                var result = client.Tracks.GetAudioAnalysis(track).Result;
-                analysis.TryAdd(track, result); 
+                var result = client.Tracks.GetAudioAnalysis(id).Result;
+                result.TrackId = id;
+                analysis.Add(result);
                
             });
             return analysis;

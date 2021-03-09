@@ -11,7 +11,7 @@ namespace Postgres
 		public int duration_ms { get; set; }
 		public bool isexplicit { get; set; }
 		public string name { get; set; }
-		public int popularity { get; set; }
+		public int? popularity { get; set; }
 		public string preview_url { get; set; }
 		public int track_number { get; set; }
 		public string type { get; set; }

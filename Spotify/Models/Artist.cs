@@ -1,4 +1,5 @@
-﻿using SpotifyAPI.Web;
+﻿using Newtonsoft.Json;
+using SpotifyAPI.Web;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -7,18 +8,37 @@ namespace Spotify.SpotifyModels
 {
     public class Artist
     {
+        [JsonProperty("spotify_url")]
         public string ExternalUrl { get; set; } = default!;
+
+        [JsonProperty("followers")]
         public int Followers { get; set; } = default!;
+
+        [JsonProperty("genres")]
         public List<string> Genres { get; set; } = default!;
-        public string Href { get; set; } = default!;
+
+        [JsonProperty("_id")]
         public string Id { get; set; } = default!;
+
+        [JsonProperty("images")]
         public List<Image> Images { get; set; } = default!;
+
+        [JsonProperty("name")]
         public string Name { get; set; } = default!;
-        public int Popularity { get; set; }
+
+        [JsonProperty("popularity")]
+        public int? Popularity { get; set; }
+
+        [JsonProperty("type")]
         public string Type { get; set; } = default!;
+
+        [JsonProperty("uri")]
         public string Uri { get; set; } = default!;
-        public List<string> albumIds { get; set; }
-        public List<string> trackIds { get; set; }
-        public List<Album> albums { get; set; }
+
+        [JsonProperty("albums")]
+        public List<string> albums { get; set; }
+
+        [JsonProperty("tracks")]
+        public List<string> tracks { get; set; }
     }
 }

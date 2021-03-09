@@ -71,7 +71,7 @@ namespace Spotify
                 var values = new List<KeyValuePair<string, string>>();
                 artists.Where(a => a.Genres != null)
                     .ToList()
-                    .ForEach(a => a.albumIds
+                    .ForEach(a => a.albums
                         .ForEach(b => values.Add(new KeyValuePair<string, string>(a.Id, b)
                         )
                     )

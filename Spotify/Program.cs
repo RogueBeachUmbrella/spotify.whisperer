@@ -2,23 +2,11 @@
 using System.Collections.Generic;
 using SpotifyAPI.Web;
 using Newtonsoft.Json;
-using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.IO;
-using System.Collections;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Linq;
-using CsvHelper;
-using System.Globalization;
-using CsvHelper.Configuration;
-using CsvHelper.Configuration.Attributes;
-using System.Configuration;
-using Npgsql;
-using Dapper;
 using System.Data;
-using System.Data.SqlClient;
 using Spotify.SpotifyModels;
+using System.Configuration;
 
 namespace Spotify
 {
@@ -26,6 +14,7 @@ namespace Spotify
     {
         static void Main(string[] args)
         {
+
             var spotify = new Spotify();
             var postgres = new Postgres();
 
@@ -33,47 +22,58 @@ namespace Spotify
             DateTime weekStart = new DateTime(2021, 02, 05);
             DateTime weekEnd = new DateTime(2021, 02, 12);
 
-
-            var chartReport = spotify.GetChartTracks(countryCode, weekStart, weekEnd);
+            var chartReport = spotify.GetChartTracks(countryCode, weekStart, weekEnd, 1, 1);
             var fullTracks = spotify.GetChartTrackData(chartReport);
-
 
             var artists = GetArtistData(spotify, fullTracks);
             var (albums, tracks) = GetAlbumTrackData(spotify, fullTracks, artists.Select(a => a.Id).Distinct().ToList());
             var audioFeatures = spotify.GetAudioFeatures(tracks.Select(t => t.Id).Distinct().ToList());
             var audioAnalysis = spotify.GetTrackAudioAnalysis(tracks.Select(t => t.Id).Distinct().ToList());
-            
-            MapTrackFeatures(tracks, audioFeatures, audioAnalysis);
 
+            tracks = MapTrackFeatures(tracks, audioFeatures, audioAnalysis);
 
-            postgres.LoadArtists(artists);
-            postgres.LoadArtistGenres(artists);
-            postgres.LoadAlbums(albums);
-            postgres.LoadAlbumArtists(albums);
-            postgres.LoadTracks(tracks);
-            postgres.LoadTrackAlbum(albums);
-            postgres.LoadTrackArtists(tracks);
-
-
+            var dataFolder = ConfigurationManager.AppSettings["Data"];
+            Directory.CreateDirectory(@$"{dataFolder}\Artist");
+            Directory.CreateDirectory(@$"{dataFolder}\Album");
+            Directory.CreateDirectory(@$"{dataFolder}\Track");
+            Directory.CreateDirectory(@$"{dataFolder}\TrackAudioFeature");
+            Directory.CreateDirectory(@$"{dataFolder}\TrackAudioAnalysis");
+            Directory.CreateDirectory(@$"{dataFolder}\ChartReport");
 
 
 
+            artists.ForEach(a =>
+            {
+                //Directory.CreateDirectory(dataFolder)
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Artist\artist-{a.Id}.json", JsonConvert.SerializeObject(a));
+            });
+            albums.ForEach(a =>
+            {
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Album\album-{a.Id}.json", JsonConvert.SerializeObject(a));
+            });
+            tracks.ForEach(t =>
+            {
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Track\track-{t.Id}.json", JsonConvert.SerializeObject(t));
+            });
+
+            //postgres.LoadArtists(artists);
+            //postgres.LoadArtistGenres(artists);
+            //postgres.LoadAlbums(albums);
+            //postgres.LoadAlbumArtists(albums);
+            //postgres.LoadTracks(tracks);
+            //postgres.LoadTrackAlbum(albums);
+            //postgres.LoadTrackArtists(tracks);
 
 
-            var i = 1;
 
 
-
-            /*
-
-
-            var x = BuildArtistList(fullArtists, fullAlbums, audioFeatures, audioAnalysis);
-            */
         }
 
-        private static void MapTrackFeatures(List<SpotifyModels.Track> tracks, List<TrackAudioFeatures> audioFeatures, Dictionary<string, TrackAudioAnalysis> audioAnalysis)
+        private static List<SpotifyModels.Track> MapTrackFeatures(List<SpotifyModels.Track> tracks, List<TrackAudioFeatures> audioFeatures, List<TrackAudioAnalysis> audioAnalysis)
         {
-            tracks.ForEach(t =>
+            var fullTracks = tracks;
+
+            fullTracks.ForEach(t =>
             {
                 t.audioFeatures = audioFeatures.Where(f => f != null && f.Id == t.Id).Select(f =>
                 new AudioFeature
@@ -91,59 +91,56 @@ namespace Spotify
                     Speechiness = f.Speechiness,
                     Tempo = f.Tempo,
                     TimeSignature = f.TimeSignature,
-                    TrackHref = f.TrackHref,
-                    Type = f.Type,
-                    Uri = f.Uri,
                     Valence = f.Valence
                 }).FirstOrDefault();
 
-                t.audioAnalysis = audioAnalysis.Where(a => a.Key == t.Id).Select(f =>
+                t.audioAnalysis = audioAnalysis.Where(a => !(a == null || !a.TrackId.Equals(t.Id))).Select(f =>
                 new AudioAnalysis
                 {
                     Meta = new SpotifyModels.Meta()
                     {
-                        analyzer_version = f.Value.Meta.analyzer_version,
-                        platform = f.Value.Meta.platform,
-                        detailed_status = f.Value.Meta.detailed_status,
-                        status_code = f.Value.Meta.status_code,
-                        timestamp = f.Value.Meta.timestamp,
-                        analysis_time = f.Value.Meta.analysis_time,
-                        input_process = f.Value.Meta.input_process
+                        analyzer_version = f.Meta.analyzer_version,
+                        platform = f.Meta.platform,
+                        detailed_status = f.Meta.detailed_status,
+                        status_code = f.Meta.status_code,
+                        timestamp = f.Meta.timestamp,
+                        analysis_time = f.Meta.analysis_time,
+                        input_process = f.Meta.input_process
                     },
                     Analysis = new SpotifyModels.Analysis()
                     {
-                        num_samples = f.Value.Track.num_samples,
-                        duration = f.Value.Track.duration,
-                        sample_md5 = f.Value.Track.sample_md5,
-                        offset_seconds = f.Value.Track.offset_seconds,
-                        window_seconds = f.Value.Track.window_seconds,
-                        analysis_sample_rate = f.Value.Track.analysis_sample_rate,
-                        analysis_channels = f.Value.Track.analysis_channels,
-                        end_of_fade_in = f.Value.Track.end_of_fade_in,
-                        start_of_fade_out = f.Value.Track.start_of_fade_out,
-                        loudness = f.Value.Track.loudness,
-                        tempo = f.Value.Track.tempo,
-                        tempo_confidence = f.Value.Track.tempo_confidence,
-                        time_signature = f.Value.Track.time_signature,
-                        time_signature_confidence = f.Value.Track.time_signature_confidence,
-                        key = f.Value.Track.key,
-                        key_confidence = f.Value.Track.key_confidence,
-                        mode = f.Value.Track.mode,
-                        mode_confidence = f.Value.Track.mode_confidence
+                        num_samples = f.Track.num_samples,
+                        duration = f.Track.duration,
+                        sample_md5 = f.Track.sample_md5,
+                        offset_seconds = f.Track.offset_seconds,
+                        window_seconds = f.Track.window_seconds,
+                        analysis_sample_rate = f.Track.analysis_sample_rate,
+                        analysis_channels = f.Track.analysis_channels,
+                        end_of_fade_in = f.Track.end_of_fade_in,
+                        start_of_fade_out = f.Track.start_of_fade_out,
+                        loudness = f.Track.loudness,
+                        tempo = f.Track.tempo,
+                        tempo_confidence = f.Track.tempo_confidence,
+                        time_signature = f.Track.time_signature,
+                        time_signature_confidence = f.Track.time_signature_confidence,
+                        key = f.Track.key,
+                        key_confidence = f.Track.key_confidence,
+                        mode = f.Track.mode,
+                        mode_confidence = f.Track.mode_confidence
                     },
-                    Bars = f.Value.Bars.Select(b => new SpotifyModels.TimeInterval()
+                    Bars = f.Bars.Select(b => new SpotifyModels.TimeInterval()
                     {
                         Start = b.Start,
                         Duration = b.Duration,
                         Confidence = b.Confidence
                     }).ToList(),
-                    Beats = f.Value.Beats.Select(b => new SpotifyModels.TimeInterval()
+                    Beats = f.Beats.Select(b => new SpotifyModels.TimeInterval()
                     {
                         Start = b.Start,
                         Duration = b.Duration,
                         Confidence = b.Confidence
                     }).ToList(),
-                    Sections = f.Value.Sections.Select(s => new SpotifyModels.Section()
+                    Sections = f.Sections.Select(s => new SpotifyModels.Section()
                     {
                         Start = s.Start,
                         Duration = s.Duration,
@@ -158,7 +155,7 @@ namespace Spotify
                         TimeSignature = s.TimeSignature,
                         TimeSignatureConfidence = s.TimeSignatureConfidence
                     }).ToList(),
-                    Segments = f.Value.Segments.Select(s => new SpotifyModels.Segment()
+                    Segments = f.Segments.Select(s => new SpotifyModels.Segment()
                     {
                         Start = s.Start,
                         Duration = s.Duration,
@@ -170,7 +167,7 @@ namespace Spotify
                         Pitches = s.Pitches,
                         Timbre = s.Timbre,
                     }).ToList(),
-                    Tatums = f.Value.Tatums.Select(b => new SpotifyModels.TimeInterval()
+                    Tatums = f.Tatums.Select(b => new SpotifyModels.TimeInterval()
                     {
                         Start = b.Start,
                         Duration = b.Duration,
@@ -178,49 +175,9 @@ namespace Spotify
                     }).ToList()
                 }).FirstOrDefault();
             });
+
+            return fullTracks;
         }
-
-        //private static List<SpotifyModels.Track> GetTracks(List<FullTrack> fullTracks, List<FullAlbum> artistFullAlbums)
-        //{
-        //    var simpleTracks = artistFullAlbums.SelectMany(x => x.Tracks.Items).Distinct().ToList();
-
-        //    return (from st in simpleTracks
-        //                 join f in fullTracks on st.Id equals f.Id into gj
-        //                 from ft in gj.DefaultIfEmpty()
-        //                 select new SpotifyModels.Track()
-        //                 {
-        //                     Id = ft?.Id ?? st.Id,
-        //                     Name = ft?.Name ?? st.Name,
-        //                     Popularity = ft != null ? ft.Popularity : 0,
-        //                     DiscNumber = ft != null ? ft.DiscNumber : st.DiscNumber,
-        //                     DurationMs = st.DurationMs,
-        //                     Explicit = st.Explicit,
-        //                     Href = st.Href,
-        //                     PreviewUrl = st.PreviewUrl,
-        //                     TrackNumber = st.TrackNumber,
-        //                     artistIds = st.Artists.Select(a => a.Id).ToList()
-
-        //                 }).ToList();
-        //}
-
-        private static List<SpotifyModels.Album> GetAllAlbums(IEnumerable<SimpleAlbum> allSimpleAlbums)
-        {
-            return allSimpleAlbums.Select(album => new SpotifyModels.Album()
-            {
-                Id = album.Id,
-                AlbumType = album.AlbumType,
-                Name = album.Name,
-                ReleaseDate = album.ReleaseDate,
-                ReleaseDatePrecision = album.ReleaseDatePrecision,
-                Type = album.Type,
-                Uri = album.Uri,
-                ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
-                Href = album.Href,
-                Images = album.Images,
-                artistIds = album.Artists.Select(a => a.Id).ToList()
-            }).ToList();
-        }
-
         private static (List<SpotifyModels.Album> albums, List<SpotifyModels.Track> tracks) GetAlbumTrackData(Spotify spotify, List<FullTrack> fullTracks, List<string> artistIds)
         {
 
@@ -241,10 +198,10 @@ namespace Spotify
                 Type = album.Type,
                 Uri = album.Uri,
                 ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
-                Href = album.Href,
                 Images = album.Images,
                 artistIds = album.Artists.Select(a => a.Id).ToList(),
-                trackIds = album.Tracks.Items.Select(a => a.Id).ToList()
+                trackIds = album.Tracks.Items.Select(a => a.Id).ToList(),
+                Genres = album.Genres.ToList()
             }).ToList();
 
 
@@ -260,8 +217,7 @@ namespace Spotify
                     Type = track.Album.Type,
                     Uri = track.Album.Uri,
                     ExternalUrl = track.Album.ExternalUrls.FirstOrDefault().Value,
-                    Href = track.Album.Href,
-                    artistIds = track.Album.Artists.Select(a => a.Id).ToList(),
+                    artistIds = track.Album.Artists.Select(a => a.Id).ToList(), 
                     trackIds = new List<string>() { track.Id}
                 }).ToList()
             );
@@ -275,27 +231,28 @@ namespace Spotify
                 TrackNumber = t.TrackNumber,
                 DiscNumber = t.DiscNumber,
                 Explicit = t.Explicit,
-                Href = t.Href,
                 PreviewUrl = t.PreviewUrl,
-                DurationMs = t.DurationMs
+                DurationMs = t.DurationMs,
+                artistIds = t.Artists.Select(a => a.Id).ToList(),
+                albumId = t.Album.Id
             }).ToList();
 
 
-            tracks.AddRange(artistFullAlbums.SelectMany(a => a.Tracks.Items).ToList().Where(a => !tracks.Exists(t => t.Id == a.Id)).Select(t => new SpotifyModels.Track()
+            tracks.AddRange(artistFullAlbums.SelectMany(a => a.Tracks.Items).ToList().Where(a => !tracks.Exists(t => t.Id == a.Id)).Select(track => new SpotifyModels.Track()
             {
-                Id = t.Id,
-                Name = t.Name,
-                TrackNumber = t.TrackNumber,
-                DiscNumber = t.DiscNumber,
-                Explicit = t.Explicit,
-                Href = t.Href,
-                PreviewUrl = t.PreviewUrl,
-                DurationMs = t.DurationMs
+                Id = track.Id,
+                Name = track.Name,
+                TrackNumber = track.TrackNumber,
+                DiscNumber = track.DiscNumber,
+                Explicit = track.Explicit,
+                PreviewUrl = track.PreviewUrl,
+                DurationMs = track.DurationMs,
+                artistIds = track.Artists.Select(a => a.Id).ToList(),
+                albumId = artistFullAlbums.Where(a => a.Tracks.Items.Exists(t => t.Id == track.Id)).Select(a => a.Id).FirstOrDefault()
             }).ToList());
 
             return (albums, tracks);
         }
-
         private static List<Artist> GetArtistData(Spotify spotify, List<FullTrack> fullTracks)
         {
             List<string> artistIds;
@@ -313,166 +270,16 @@ namespace Spotify
                 Type = artist.Type,
                 Uri = artist.Uri,
                 ExternalUrl = artist.ExternalUrls.Values.FirstOrDefault(),
-                Href = artist.Href
+                Followers = artist.Followers.Total,
+                Images = artist.Images,
+                Popularity = artist.Popularity,
+                albums = fullTracks.Where(ft => ft.Album.Artists.Exists(a => a.Id == artist.Id)).Select(ft => ft.Album.Id).ToList(),
+                tracks = fullTracks.Where(ft => ft.Artists.Exists(a => a.Id == artist.Id)).Select(ft => ft.Id).ToList(),
+                Genres= artist.Genres.ToList()
+                //Href = artist.Href
             }).Distinct().ToList();
 
             return artists;
-        }
-
-        static List<SpotifyModels.Artist> BuildArtistList(List<FullArtist> fullArtists, List<FullAlbum> albums, List<TrackAudioFeatures> audioFeatures, Dictionary<string, SpotifyAPI.Web.TrackAudioAnalysis> audioAnalysis)
-        {
-            var artists = new List<Artist>();
-
-            var query = from artist in fullArtists
-                        select new SpotifyModels.Artist()
-                        {
-                            ExternalUrl = artist.ExternalUrls.FirstOrDefault().Value,
-                            Followers = artist.Followers.Total,
-                            Genres = artist.Genres,
-                            Href = artist.Href,
-                            Id = artist.Id,
-                            Images = artist.Images,
-                            Name = artist.Name,
-                            Popularity = artist.Popularity,
-                            Type = artist.Type,
-                            Uri = artist.Uri,
-                            albums = (from album in albums.Where(a => a!=null)
-                                      where album.Artists.Select(a => a.Id == artist.Id).FirstOrDefault()
-                                      select new Album()
-                                      {
-                                          AlbumType = album.AlbumType,
-                                          ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
-                                          Genres = album.Genres,
-                                          Href = album.Href,
-                                          Id = album.Href,
-                                          Images = album.Images,
-                                          Name = album.Name,
-                                          Popularity = album.Popularity,
-                                          ReleaseDate = album.ReleaseDate,
-                                          ReleaseDatePrecision = album.ReleaseDatePrecision,
-                                          Type = album.Type,
-                                          Uri = album.Uri,
-                                          Tracks = album.Tracks.Items.Select(track => new SpotifyModels.Track()
-                                          {
-                                              DiscNumber = track.DiscNumber,
-                                              DurationMs = track.DurationMs,
-                                              Explicit = track.Explicit,
-                                              Href = track.Href,
-                                              Id = track.Id,
-                                              Name = track.Name,
-                                              PreviewUrl = track.PreviewUrl,
-                                              TrackNumber = track.TrackNumber,
-                                              audioFeatures = (from feature in audioFeatures
-                                                               where feature.Id == track.Id
-                                                               select new AudioFeature()
-                                                               {
-                                                                   Acousticness = feature.Acousticness,
-                                                                   AnalysisUrl = feature.AnalysisUrl,
-                                                                   Danceability = feature.Danceability,
-                                                                   DurationMs = feature.DurationMs,
-                                                                   Energy = feature.Energy,
-                                                                   Instrumentalness = feature.Instrumentalness,
-                                                                   Key = feature.Key,
-                                                                   Liveness = feature.Liveness,
-                                                                   Loudness = feature.Loudness,
-                                                                   Mode = feature.Mode,
-                                                                   Speechiness = feature.Speechiness,
-                                                                   Tempo = feature.Tempo,
-                                                                   TimeSignature = feature.TimeSignature,
-                                                                   TrackHref = feature.TrackHref,
-                                                                   Type = feature.Type,
-                                                                   Uri = feature.Uri,
-                                                                   Valence = feature.Valence
-                                                               }).FirstOrDefault(),
-                                              audioAnalysis = (from analysis in audioAnalysis
-                                                               where analysis.Key == track.Id
-                                                               select new SpotifyModels.AudioAnalysis()
-                                                               {
-                                                                   Meta = new SpotifyModels.Meta()
-                                                                   {
-                                                                       analyzer_version = analysis.Value.Meta.analyzer_version,
-                                                                       platform = analysis.Value.Meta.platform,
-                                                                       detailed_status = analysis.Value.Meta.detailed_status,
-                                                                       status_code = analysis.Value.Meta.status_code,
-                                                                       timestamp = analysis.Value.Meta.timestamp,
-                                                                       analysis_time = analysis.Value.Meta.analysis_time,
-                                                                       input_process = analysis.Value.Meta.input_process
-                                                                   },
-                                                                   //Analysis = new SpotifyModels.Analysis() {
-                                                                   //   num_samples = analysis.Value.Analysis.num_samples
-                                                                   //},
-                                                                   //{
-                                                                   //num_samples = analysis.Value.Analysis.num_samples
-                                                                   //duration = analysis.Value.Analysis.duration,
-                                                                   //sample_md5 = analysis.Value.Analysis.sample_md5,
-                                                                   //offset_seconds = analysis.Value.Analysis.offset_seconds,
-                                                                   //window_seconds = analysis.Value.Analysis.window_seconds,
-                                                                   //analysis_sample_rate = analysis.Value.Analysis.analysis_sample_rate,
-                                                                   //analysis_channels = analysis.Value.Analysis.analysis_channels,
-                                                                   //end_of_fade_in = analysis.Value.Analysis.end_of_fade_in,
-                                                                   //start_of_fade_out = analysis.Value.Analysis.start_of_fade_out,
-                                                                   //loudness = analysis.Value.Analysis.loudness,
-                                                                   //tempo = analysis.Value.Analysis.tempo,
-                                                                   //tempo_confidence = analysis.Value.Analysis.tempo_confidence,
-                                                                   //time_signature = analysis.Value.Analysis.time_signature,
-                                                                   //time_signature_confidence = analysis.Value.Analysis.time_signature_confidence,
-                                                                   //key = analysis.Value.Analysis.key,
-                                                                   //key_confidence = analysis.Value.Analysis.key_confidence,
-                                                                   //mode = analysis.Value.Analysis.mode,
-                                                                   //mode_confidence = analysis.Value.Analysis.mode_confidence
-
-                                                                   //},
-                                                                   Bars = analysis.Value.Beats.Select(b => new SpotifyModels.TimeInterval()
-                                                                   {
-                                                                       Start = b.Start,
-                                                                       Duration = b.Duration,
-                                                                       Confidence = b.Confidence
-                                                                   }).ToList(),
-                                                                   Beats = analysis.Value.Beats.Select(b => new SpotifyModels.TimeInterval()
-                                                                   {
-                                                                       Start = b.Start,
-                                                                       Duration = b.Duration,
-                                                                       Confidence = b.Confidence
-                                                                   }).ToList(),
-                                                                   Sections = analysis.Value.Sections.Select(s => new SpotifyModels.Section()
-                                                                   {
-                                                                       Start = s.Start,
-                                                                       Duration = s.Duration,
-                                                                       Confidence = s.Confidence,
-                                                                       Loudness = s.Loudness,
-                                                                       Tempo = s.Tempo,
-                                                                       TempoConfidence = s.TempoConfidence,
-                                                                       Key = s.Key,
-                                                                       KeyConfidence = s.KeyConfidence,
-                                                                       Mode = s.Mode,
-                                                                       ModeConfidence = s.ModeConfidence,
-                                                                       TimeSignature = s.TimeSignature,
-                                                                       TimeSignatureConfidence = s.TimeSignatureConfidence
-                                                                   }).ToList(),
-                                                                   Segments = analysis.Value.Segments.Select(s => new SpotifyModels.Segment()
-                                                                   {
-                                                                       Start = s.Start,
-                                                                       Duration = s.Duration,
-                                                                       Confidence = s.Confidence,
-                                                                       LoudnessStart = s.LoudnessStart,
-                                                                       LoudnessMax = s.LoudnessMax,
-                                                                       LoudnessMaxTime = s.LoudnessMaxTime,
-                                                                       LoudnessEnd = s.LoudnessEnd
-
-                                                                   }).ToList(),
-                                                                   Tatums = analysis.Value.Tatums.Select(b => new SpotifyModels.TimeInterval()
-                                                                   {
-                                                                       Start = b.Start,
-                                                                       Duration = b.Duration,
-                                                                       Confidence = b.Confidence
-                                                                   }).ToList()
-                                                               }).FirstOrDefault()
-
-                                          }).ToList()
-                                      }).ToList()
-
-                        };
-            return query.ToList();
         }
     }
 }
