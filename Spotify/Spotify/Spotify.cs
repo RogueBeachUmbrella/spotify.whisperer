@@ -35,7 +35,18 @@ namespace Spotify
         }
         public List<ChartReportTrack> GetChartTracks(string countryCode, DateTime weekStart, DateTime weekEnd, int index = 0, int range = 0)
         {
-            var url = @"https://spotifycharts.com/regional/us/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/us/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/gb/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/ae/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/br/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/es/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/it/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/ma/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/ni/weekly/2021-02-05--2021-02-12/download";
+            //var url = @"https://spotifycharts.com/regional/au/weekly/2021-02-05--2021-02-12/download";
+            var url = @"https://spotifycharts.com/regional/jp/weekly/2021-02-05--2021-02-12/download";
+
+
 
             var client = new HttpClient();
             var responseStream = client.GetStreamAsync(url).Result;
@@ -61,6 +72,17 @@ namespace Spotify
             }
             
         }
+        public List<FullTrack> GetChartTrackData(List<ChartReportTrack> chartReportTracks)
+        {
+            var tracks = new List<FullTrack>();
+            for (int i = 0; i < chartReportTracks.Count; i += (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i))
+            {
+                var request = new TracksRequest(chartReportTracks.Select(x => x.id).ToList().GetRange(i, (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i)));
+                var response = client.Tracks.GetSeveral(request).Result;
+                tracks.AddRange(response.Tracks.ToList());
+            }
+            return tracks;
+        }
         public (List<SpotifyModels.Artist> artists, List<ChartTrack> chartTracks) GetChartData(List<ChartReportTrack> chartReportTracks, string countryCode, DateTime weekStart, DateTime weekEnd)
         {
             //(List<string> artistIds, List <string> albumIds, List<ChartTrack> chartTracks)
@@ -79,7 +101,7 @@ namespace Spotify
 
 
                 //need distinct artist ids 
-                var artists = tracksResponse.SelectMany(t => t.Artists).dis
+                var artists = tracksResponse.SelectMany(t => t.Artists);
                 var albums = tracksResponse.Select(t => t.Album);
                 var tracks = tracksResponse.GroupBy(t => t.Album.Id);
 
@@ -189,22 +211,8 @@ namespace Spotify
             try
             {
                 artistIds.ForEach(id => { 
-                    var response = client.Artists.GetAlbums(id, new ArtistsAlbumsRequest() { IncludeGroupsParam = ArtistsAlbumsRequest.IncludeGroups.Album }).Result.Items;
-                    
-                    
+                    var response = client.Artists.GetAlbums(id, new ArtistsAlbumsRequest() { IncludeGroupsParam = (ArtistsAlbumsRequest.IncludeGroups.Album), Limit = 50 }).Result.Items;
                     response.ForEach(a => {
-                        //var album = new Album()
-                        //{
-                        //    id = a.Id,
-                        //    album_group = a.AlbumGroup,
-                        //    album_type = a.AlbumType,
-                        //    name = a.Name,
-                        //    release_date = a.ReleaseDate,
-                        //    release_date_precision = a.ReleaseDatePrecision,
-                        //    type = a.Type,
-                        //    uri = a.Uri,
-                        //    spotify_url = a.ExternalUrls.FirstOrDefault().Value
-                        //};
                         albums.Add(a);
                     });         
                 });
@@ -244,7 +252,7 @@ namespace Spotify
         public Dictionary<string, TrackAudioAnalysis> GetTrackAudioAnalysis(List<string> ids)
         {
             var analysis = new Dictionary<string, TrackAudioAnalysis>();
-            ids.GetRange(0, 5).ForEach(track =>
+            ids.GetRange(0, 1).ForEach(track =>
             {
                 var result = client.Tracks.GetAudioAnalysis(track).Result;
                 analysis.TryAdd(track, result); 

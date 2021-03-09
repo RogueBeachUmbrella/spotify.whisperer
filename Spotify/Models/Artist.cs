@@ -17,6 +17,8 @@ namespace Spotify.SpotifyModels
         public int Popularity { get; set; }
         public string Type { get; set; } = default!;
         public string Uri { get; set; } = default!;
+        public List<string> albumIds { get; set; }
+        public List<string> trackIds { get; set; }
         public List<Album> albums { get; set; }
     }
 }

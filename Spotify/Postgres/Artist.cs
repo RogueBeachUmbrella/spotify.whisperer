@@ -1,4 +1,5 @@
-﻿using SpotifyAPI.Web;
+﻿using Spotify;
+using SpotifyAPI.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,13 +24,13 @@ namespace Postgres
 		//public List<Album> albums { get; set; }
 		public List<ChartTrack> chartTracks { get; set; }
 
-		public Artist()
-        {
-			genres = new List<ArtistGenre>();
-			images = new List<ArtistImage>();
-			relatedArtists = new List<RelatedArtist>();
-			//albums = new List<Album>();
-			chartTracks = new List<ChartTrack>();
-        }
+		//public Artist()
+  //      {
+		//	genres = new List<ArtistGenre>();
+		//	images = new List<ArtistImage>();
+		//	relatedArtists = new List<RelatedArtist>();
+		//	//albums = new List<Album>();
+		//	chartTracks = new List<ChartTrack>();
+  //      }
 	}
 }

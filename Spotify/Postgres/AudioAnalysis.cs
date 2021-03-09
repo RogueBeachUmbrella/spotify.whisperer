@@ -40,7 +40,10 @@ namespace Postgres
 		//public List<TrackSection> sections { get; set; }
 		//public List<TrackSegment> segments { get; set; }
 		//public List<TrackTatum> tatums { get; set; }
-		//public AudioAnalysis()
+		//public 
+		
+		
+
   //      {
 		//	bars = new List<TrackBar>();
 		//	beats = new List<TrackBeat>();

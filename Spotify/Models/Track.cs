@@ -17,6 +17,8 @@ namespace Spotify.SpotifyModels
         public int Popularity { get; set; }
         public string PreviewUrl { get; set; } = default!;
         public int TrackNumber { get; set; }
+        public List<string> artistIds { get; set; }
+        public string albumId { get; set; }
         public AudioFeature audioFeatures { get; set; }
         public AudioAnalysis audioAnalysis { get; set; }
     }
@@ -80,10 +82,6 @@ namespace Spotify.SpotifyModels
         public double key_confidence { get; set; }
         public int mode { get; set; }
         public double mode_confidence { get; set; }
-        public Analysis()
-        {
-
-        }
     }
     public class TimeInterval
     {

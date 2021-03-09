@@ -22,10 +22,10 @@ namespace Postgres
 		public string spotify_url { get; set; }
 		public List<Track> tracks { get; set; }
 
-		public Album()
-        {
-			tracks = new List<Track>();
-        }
+		//public Album()
+  //      {
+		//	tracks = new List<Track>();
+  //      }
 		public void GetTracks(SpotifyClient client)
         {
             var responseA = client.Albums.GetTracks(id).Result;

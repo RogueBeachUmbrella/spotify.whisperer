@@ -5,8 +5,10 @@ using System.Linq;
 using System.Data;
 using Dapper;
 using System;
+using Postgres;
 
 namespace Spotify
+
 {
     public class Postgres
     {
@@ -15,164 +17,388 @@ namespace Spotify
         {
             _connection = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString);
         }
-        //public static List<Track> LoadTracks(List<Track> tracks)
-        //{
-        //    string getId = @$"select track_id from track where id = @id";
-        //    string insert = @$"INSERT INTO track(duration_ms, explicit, name, popularity, preview_url, track_number, type, uri, spotify_url, id) VALUES (@duration_ms, @isexplicit, @name, @popularity, @preview_url, @track_number, @type, @uri, @spotify_url, @id) RETURNING track_id;";
-        //    using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
-        //    {
-        //        tracks.ForEach(track =>
-        //        {
-        //            track.track_id = db.QuerySingleOrDefault<int>(getId, track);
-        //            if(track.track_id == 0)
-        //            {
-        //                track.track_id = db.QuerySingle<int>(insert, track);
-        //            }
-        //        });
-        //        return tracks;
-        //    }
-        //}
-        //public void LoadArtist(Artist artist)
-        //{
-        //    using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
-        //    {
-        //        string getId;
-        //        string insert;
-        //        //artist
-        //        getId = "select artist_id from artist where id = @id;";
-        //        insert = "INSERT INTO artist(id, name, popularity, type, uri, followers, spotify_url) VALUES (@id, @name, @popularity, @type, @uri, @followers, @spotify_url) returning artist_id;";
-        //        artist.artist_id = db.QuerySingleOrDefault<int>(getId, artist);
-        //        if (artist.artist_id == 0)
-        //        {
-        //            artist.artist_id = db.QuerySingle<int>(insert, artist);
-        //        }
 
-        //        //artist image
-        //        getId = "select artist_image_id from artist_image where artist_id = @artist_id and url = @url;";
-        //        insert = "INSERT INTO artist_image(artist_id, height, url, width) VALUES (@artist_id, @height, @url, @width) returning artist_image_id;";
-        //        artist.images.ForEach(image =>
-        //        {
-        //            image.artist_id = artist.artist_id;
-        //            var id = db.QuerySingleOrDefault<int>(getId, image);
-        //            if (id == 0)
-        //            {
-        //                image.artist_image_id = db.QuerySingle<int>(insert, image);
-        //            }
-        //        });
+        public void LoadArtists(List<SpotifyModels.Artist> artists)
+        {
+            string insert;
+            insert = "INSERT INTO artist(id, name, popularity, type, uri, followers, spotify_url) " +
+                     "VALUES (@id, @name, @popularity, @type, @uri, @followers, @spotify_url) " +
+                     "ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, artists.Select(a => new Artist()
+                {
+                    id = a.Id,
+                    name = a.Name,
+                    popularity = a.Popularity,
+                    type = a.Type,
+                    uri = a.Uri,
+                    followers = a.Followers,
+                    spotify_url = a.ExternalUrl
+                }).ToList());
+            }  
+        }
+        public void LoadArtistGenres(List<SpotifyModels.Artist> artists)
+        {
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                //genre enum
+                artists.Where(a => a.Genres != null)
+                .SelectMany(a => a?.Genres)
+                .Distinct()
+                .ToList()
+                .ForEach(g =>
+                {
+                    try
+                    {
+                        db.Execute(@$"ALTER TYPE genre ADD VALUE '{g}'");
+                    }
+                    catch (Exception e)
+                    {
 
-                
-        //        //var genres = db.Query<string>("select enumlabel from pg_enum;").ToList();
-        //        artist.genres.ForEach(genre => {
-        //            genre.artist_id = artist.artist_id;
+                    }
+                    //try
+                    //{
+                    //    db.Execute(@$"INSERT INTO genres(genre) VALUES ('{g}') ON CONFLICT DO NOTHING;");
+                    //}
+                    //catch (Exception e)
+                    //{
 
-        //            //genre enum
-        //            if (!db.Query<string>("select enumlabel from pg_enum;").ToList().Contains(genre.genre))
-        //            {
-        //                db.Execute(@$"ALTER TYPE genre ADD VALUE '{genre.genre}'");
-        //            }
+                    //}
+                });
 
-        //            //genre
-        //            getId = @$"select genre_id from genres where genre = '{genre.genre}';";
-        //            insert = @$"INSERT INTO genres(genre) VALUES ('{genre.genre}') RETURNING genre_id;";
-        //            genre.genre_id = db.QuerySingleOrDefault<int>(getId, genre);
-        //            if (genre.genre_id == 0)
-        //            {
-        //                genre.genre_id = db.QuerySingle<int>(insert, genre);
-        //            }
+                //artist genre
+                var values = new List<KeyValuePair<string, string>>();
+                artists.Where(a => a.Genres != null)
+                    .ToList()
+                    .ForEach(a => a.albumIds
+                        .ForEach(b => values.Add(new KeyValuePair<string, string>(a.Id, b)
+                        )
+                    )
+                );
+                var insert = @$"INSERT INTO artist_genre(artistId, genre) VALUES (@artistId, @genre) ON CONFLICT DO NOTHING;";
+                var rowsAffected = db.Execute(insert, values.Select(x => new { artistId = x.Key, albumId = x.Value }));
+            }
+        }
+        public void LoadAlbums(List<SpotifyModels.Album> albums)
+        {
+            string insert;
+            insert = "INSERT INTO album(id, album_group, album_type, name, release_date, release_date_precision, total_tracks, type, uri, spotify_url) " +
+                     "VALUES (@id, @album_group, @album_type, @name, @release_date, @release_date_precision, @total_tracks, @type, @uri, @spotify_url)" +
+                     "ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, albums.Select(a => new Album()
+                {
+                    id = a.Id,
+                    name = a.Name,                    
+                    type = a.Type,
+                    uri = a.Uri,
+                    spotify_url = a.ExternalUrl,
+                    album_group = a.AlbumType,
+                    album_type = a.AlbumType,
+                    release_date = a.ReleaseDate,
+                    release_date_precision = a.ReleaseDatePrecision
+                    //total_tracks = a.trackIds.Count(),                 
+                }).ToList());
+            }
+        }
+        public void LoadAlbumArtists(List<SpotifyModels.Album> albums)
+        {
+            var values = new List<KeyValuePair<string, string>>();
+            albums.Where(album => album.artistIds != null).ToList().ForEach(album => album.artistIds.ForEach(artistId => values.Add(new KeyValuePair<string, string>(album.Id, artistId))));
 
-        //            //artist genre
-        //            getId = @$"select artist_genre_id from artist_genre where artist_id = @artist_id and genre_id = @genre_id;";
-        //            insert = @$"INSERT INTO artist_genre(artist_id, genre_id) VALUES (@artist_id, @genre_id) RETURNING artist_genre_id;";                    
-        //            genre.artist_genre_id = db.QuerySingleOrDefault<int>(getId, genre);
-        //            if (genre.artist_genre_id == 0)
-        //            {
-        //                genre.artist_genre_id = db.QuerySingle<int>(insert, genre);
-        //            }
-        //        });
+            string insert;
+            insert = "INSERT INTO album_artist(artistId, albumId) VALUES (@artistId, @albumId) ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, values.Where(a => a.Value != null).ToList().Select(x => new { albumId = x.Key, artistId = x.Value}));
+            }
+        }
+        public class TrackMap 
+        {
+            public int track_id { get; set; }
+            public string Id { get; set; }
+            public SpotifyModels.Track track { get; set; }
+        }
+        public List<TrackMap> GetTrackIdMap(List<SpotifyModels.Track> tracks)
+        {
+            var sql = "SELECT track_id, id FROM track where id = @Id;";
+            var trackMap = new List<TrackMap>();
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                tracks.Select(track => new { track = track, Id = track.Id })
+                    .ToList()
+                    .ForEach(t => {
+                        var query = db.Query<TrackMap>(sql, new { Id = t.Id })
+                        .Select(q => new TrackMap() { 
+                            track = t.track,
+                            track_id = q.track_id,
+                            Id = q.Id
 
-        //        artist.albums.ForEach(album => {
-        //            //album
-        //            getId = @$"select album_id from album where id = @id;";
-        //            insert = @$"INSERT INTO album(id, album_group, album_type, name, release_date, release_date_precision, total_tracks, type, uri, spotify_url) VALUES (@id, @album_group, @album_type, @name, @release_date, @release_date_precision, @total_tracks, @type, @uri, @spotify_url) RETURNING album_id;";
-        //            album.album_id = db.QuerySingleOrDefault<int>(getId, album);
-        //            if (album.album_id == 0)
-        //            {
-        //                album.album_id = db.QuerySingle<int>(insert, album);
-        //            }
+                        });
+                        trackMap.AddRange(query);
+                    });
 
-        //            //artist album
-        //            getId = @$"select album_artist_id from album_artist where artist_id = @artist_id and album_id = @album_id;";
-        //            insert = @$"INSERT INTO album_artist(artist_id, album_id) VALUES (@artist_id, @album_id);";
-        //            var id = db.QuerySingleOrDefault<int>(getId, new { album.album_id, artist.artist_id });
-        //            if (id == 0)
-        //            {
-        //                db.QuerySingleOrDefault<int>(insert, new { album.album_id, artist.artist_id });
-        //            }
 
-        //            album.tracks.ForEach(track => {
-        //                //Tracks
-        //                getId = @$"select track_id from track where id = @id";
-        //                insert = @$"INSERT INTO track(duration_ms, explicit, name, popularity, preview_url, track_number, type, uri, spotify_url, id)VALUES (@duration_ms, @isexplicit, @name, @popularity, @preview_url, @track_number, @type, @uri, @spotify_url, @id) RETURNING track_id;";
-        //                track.track_id = db.QuerySingleOrDefault<int>(getId, track);
-        //                if (track.track_id == 0)
-        //                {
-        //                    track.track_id = db.QuerySingle<int>(insert, track);
-        //                }
+                //.Select(m =>
+                //new TrackMap()
+                //{
+                //    track = tracks.Where(t => t.Id == m.trackId).FirstOrDefault(),
+                //    trackId = m.trackId,
+                //    track_id = m.track_id
+                //}).ToList();
 
-        //                //track album
-        //                getId = @$"select track_album_id from track_album where track_id = @track_id and album_id = @album_id;";
-        //                insert = @$"INSERT INTO track_album(track_id, album_id, disc_number, track_number) VALUES (@track_id, @album_id, @disc_number, @track_number);";
-        //                if (db.QuerySingleOrDefault<int>(getId, new { album.album_id, track.track_id }) == 0)
-        //                {
-        //                    db.QuerySingleOrDefault<int>(insert, new { album.album_id, track.track_id, track.track_number, track.disc_number });
-        //                }
+            
 
-        //                //track artist
-        //                getId = @$"select track_artist_id from track_artist where track_id = @track_id and artist_id = @artist_id;";
-        //                insert = @$"INSERT INTO track_artist(track_id, artist_id) VALUES (@track_id, @artist_id);";
-        //                if (db.QuerySingleOrDefault<int>(getId, new { artist.artist_id, track.track_id }) == 0)
-        //                {
-        //                    db.QuerySingleOrDefault<int>(insert, new { artist.artist_id, track.track_id });
-        //                }
 
-        //                //track audio analysis
-        //                getId = @$"select track_audio_analysis_id from track_audio_analysis where track_id = @track_id;";
-        //                insert = @$"INSERT INTO track_audio_analysis(track_id, num_samples, duration, sample_md5, offset_seconds, window_seconds, analysis_sample_rate, analysis_channels, end_of_fade_in, start_of_fade_out, loudness, tempo, tempo_confidence, time_signature, time_signature_confidence, key, key_confidence, mode, mode_confidence) VALUES (@track_id, @num_samples, @duration, @sample_md5, @offset_seconds, @window_seconds, @analysis_sample_rate, @analysis_channels, @end_of_fade_in, @start_of_fade_out, @loudness, @tempo, @tempo_confidence, @time_signature, @time_signature_confidence, @key, @key_confidence, @mode, @mode_confidence);";
-        //                if (db.QuerySingleOrDefault<int>(getId, new { track.track_id }) == 0)
-        //                {
-        //                    track.audioAnalysis.track_id = track.track_id;
-        //                    db.QuerySingleOrDefault<int>(insert, track.audioAnalysis);
-        //                }
+                return trackMap;
+            }
+        }
+        public void LoadTracks(List<SpotifyModels.Track> tracks)
+        {
+            string insert;
+            insert = "INSERT INTO track(duration_ms, isexplicit, name, popularity, preview_url, track_number, type, uri, spotify_url, id) " +
+                     "VALUES (@duration_ms, @isexplicit, @name, @popularity, @preview_url, @track_number, @type, @uri, @spotify_url, @id)" +
+                     "ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, tracks.Select(t => new Track()
+                {
+                    disc_number = t.DiscNumber,
+                    duration_ms = t.DurationMs,
+                    isexplicit = t.Explicit,
+                    name = t.Name,
+                    popularity = t.Popularity,
+                    preview_url = t.PreviewUrl,
+                    track_number = t.TrackNumber,
+                    type = "track",
+                    uri = t.ExternalUrl,
+                    spotify_url = t.ExternalUrl,
+                    id = t.Id
+                    //total_tracks = a.trackIds.Count(),                 
+                }).ToList());
+            }
 
-        //                track.audioAnalysis.bars.ForEach(bar => {
-        //                    //track bar
-        //                    getId = @$"select track_bar_id from track_bar where track_id = @track_id and start = @start and duration = @duration and confidence = @confidence;";
-        //                    insert = @$"INSERT INTO track_bar(track_id, start, duration, confidence) VALUES (@track_id, @start, @duration, @confidence);";
-        //                    if (db.QuerySingleOrDefault<int>(getId, new { track.track_id, bar.start, bar.duration, bar.confidence }) == 0)
-        //                    {
-        //                        db.QuerySingleOrDefault<int>(insert, new { track.track_id, bar.start, bar.duration, bar.confidence });
-        //                    }
-        //                });
+            var trackIdMap = GetTrackIdMap(tracks).Join(tracks, m => m.Id, t => t.Id, (m, t) => new TrackMap() { track_id = m.track_id, Id = t.Id, track = t }).ToList();
 
-        //                track.audioAnalysis.beats.ForEach(beat => {
-        //                    //track beat
-        //                    getId = @$"select track_beat_id from track_beat where track_id = @track_id and start = @start and duration = @duration and confidence = @confidence;";
-        //                    insert = @$"INSERT INTO track_beat(track_id, start, duration, confidence) VALUES (@track_id, @start, @duration, @confidence);";
-        //                    if (db.QuerySingleOrDefault<int>(getId, new { track.track_id, beat.start, beat.duration, beat.confidence }) == 0)
-        //                    {
-        //                        db.QuerySingleOrDefault<int>(insert, new { track.track_id, beat.start, beat.duration, beat.confidence });
-        //                    }
-        //                });
+            LoadTrackAudioAnalisys(trackIdMap);
+            LoadTrackBars(trackIdMap);
+            LoadTrackBeats(trackIdMap);
+            LoadTrackSection(trackIdMap);
+            LoadTrackSegmentPitch(trackIdMap);
+            LoadTrackSegmentTimbre(trackIdMap);
+            LoadTrackSegments(trackIdMap);
+            LoadTrackTatums(trackIdMap);
+        }
+        private static void LoadTrackTatums(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_tatum(track_id, start, duration, confidence) 
+                               VALUES(@track_id, @start, @duration, @confidence) 
+                               ON CONFLICT DO NOTHING;";
 
-        //                track.audioAnalysis.tatums.ForEach(tatum => {
-        //                    //track tatum
-        //                    getId = @$"select track_tatum_id from track_tatum where track_id = @track_id and start = @start and duration = @duration and confidence = @confidence;";
-        //                    insert = @$"INSERT INTO track_tatum(track_id, start, duration, confidence) VALUES (@track_id, @start, @duration, @confidence);";
-        //                    if (db.QuerySingleOrDefault<int>(getId, new { track.track_id, tatum.start, tatum.duration, tatum.confidence }) == 0)
-        //                    {
-        //                        db.QuerySingleOrDefault<int>(insert, new { track.track_id, tatum.start, tatum.duration, tatum.confidence });
-        //                    }
-        //                });
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Tatums.ToList().Select(b =>
+                new TrackTatum()
+                {
+                    track_id = t.track_id,
+                    start = (decimal)b.Start,
+                    duration = (decimal)b.Duration,
+                    confidence = (decimal)b.Confidence
+                })).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackSegments(List<TrackMap> trackIdMap)
+        {
+           
+            string insert = @$"INSERT INTO track_segment(track_id, start, duration, confidence, loudness_start, loudness_max_time, loudness_max, loudness_end) 
+                               VALUES (@track_id, @start, @duration, @confidence, @loudness_start, @loudness_max_time, @loudness_max, @loudness_end)
+                               ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Segments.Select(s =>
+                new TrackSegment()
+                {
+                    track_id = t.track_id,
+                    start = (decimal)s.Start,
+                    duration = (decimal)s.Duration,
+                    confidence = (decimal)s.Confidence,
+                    loudness_start = (decimal)s.LoudnessStart,
+                    loudness_max_time = (decimal)s.LoudnessMaxTime,
+                    loudness_max = (decimal)s.LoudnessMax,
+                    loudness_end = (decimal)s.LoudnessEnd
+                })).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackSegmentPitch(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_segment_pitch(trackId, start, duration, pitch) 
+                            VALUES (@trackId, @start, @duration, @pitch) 
+                            ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Segments.SelectMany(s => s.Pitches.Select(p => 
+                new 
+                { 
+                    trackId = t.Id,
+                    start = s.Start,
+                    duration = s.Duration,
+                    pitch = p 
+                }))).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackSegmentTimbre(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_segment_timbre(trackId, start, duration, timbre) 
+                            VALUES (@trackId, @start, @duration, @timbre) 
+                            ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Segments.SelectMany(s => s.Timbre.Select(p =>
+                new
+                {
+                    trackId = t.Id,
+                    start = s.Start,
+                    duration = s.Duration,
+                    timbre = p
+                }))).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackSection(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_section(track_id, start, duration, confidence, loudness, tempo, tempo_confidence, key, key_confidence, mode, mode_confidence, time_signature, time_signature_confidence) 
+                               VALUES (@track_id, @start, @duration, @confidence, @loudness, @tempo, @tempo_confidence, @key, @key_confidence, @mode, @mode_confidence, @time_signature, @time_signature_confidence) 
+                               ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Sections.Select(s =>
+                new TrackSection()
+                {
+                    track_id = t.track_id,
+                    start = (decimal)s.Start,
+                    duration = (decimal)s.Duration,
+                    confidence = (decimal)s.Confidence,
+                    loudness = (decimal)s.Loudness,
+                    tempo = (decimal)s.Tempo,
+                    tempo_confidence = (decimal)s.TempoConfidence,
+                    key = s.Key,
+                    key_confidence = (decimal)s.KeyConfidence,
+                    mode = s.Mode,
+                    mode_confidence = (decimal)s.ModeConfidence,
+                    time_signature = s.TimeSignature,
+                    time_signature_confidence = (decimal)s.TimeSignatureConfidence
+                })).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackBeats(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_beat(track_id, start, duration, confidence) 
+                               VALUES(@track_id, @start, @duration, @confidence) 
+                               ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Beats.Select(b =>
+                new TrackBeat()
+                {
+                    track_id = t.track_id,
+                    start = (decimal)b.Start,
+                    duration = (decimal)b.Duration,
+                    confidence = (decimal)b.Confidence
+                })).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackBars(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_bar(track_id, start, duration, confidence) 
+                               VALUES(@track_id, @start, @duration, @confidence) 
+                               ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var values = trackIdMap.Where(t => t.track.audioAnalysis != null).SelectMany(t => t.track.audioAnalysis.Bars.Select(b =>
+                new TrackBar()
+                {
+                    track_id = t.track_id,
+                    start = (decimal)b.Start,
+                    duration = (decimal)b.Duration,
+                    confidence = (decimal)b.Confidence
+                }).ToList()).ToList();
+                var rowsAffected = db.Execute(insert, values);
+            }
+        }
+        private static void LoadTrackAudioAnalisys(List<TrackMap> trackIdMap)
+        {
+            string insert = @$"INSERT INTO track_audio_analysis(track_id, num_samples, duration, sample_md5, offset_seconds, window_seconds, analysis_sample_rate, analysis_channels, end_of_fade_in, start_of_fade_out, loudness, tempo, tempo_confidence, time_signature, time_signature_confidence, key, key_confidence, mode, mode_confidence) 
+                               VALUES (@track_id, @num_samples, @duration, @sample_md5, @offset_seconds, @window_seconds, @analysis_sample_rate, @analysis_channels, @end_of_fade_in, @start_of_fade_out, @loudness, @tempo, @tempo_confidence, @time_signature, @time_signature_confidence, @key, @key_confidence, @mode, @mode_confidence)
+                               ON CONFLICT DO NOTHING;";
+
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                //check for nulls
+                var rowsAffected = db.Execute(insert, trackIdMap.Where(t => t.track.audioAnalysis != null).Select(t => new AudioAnalysis()
+                {
+                    num_samples = t.track.audioAnalysis.Analysis.num_samples,
+                    duration = (decimal)t.track.audioAnalysis.Analysis.duration,
+                    sample_md5 = t.track.audioAnalysis.Analysis.sample_md5,
+                    offset_seconds = t.track.audioAnalysis.Analysis.offset_seconds,
+                    window_seconds = t.track.audioAnalysis.Analysis.window_seconds,
+                    analysis_sample_rate = t.track.audioAnalysis.Analysis.analysis_sample_rate,
+                    analysis_channels = t.track.audioAnalysis.Analysis.analysis_channels,
+                    end_of_fade_in = (decimal)t.track.audioAnalysis.Analysis.end_of_fade_in,
+                    start_of_fade_out = (decimal)t.track.audioAnalysis.Analysis.start_of_fade_out,
+                    loudness = (decimal)t.track.audioAnalysis.Analysis.loudness,
+                    tempo = (decimal)t.track.audioAnalysis.Analysis.tempo,
+                    tempo_confidence = (decimal)t.track.audioAnalysis.Analysis.tempo_confidence,
+                    time_signature = t.track.audioAnalysis.Analysis.time_signature,
+                    time_signature_confidence = (decimal)t.track.audioAnalysis.Analysis.time_signature_confidence,
+                    key = t.track.audioAnalysis.Analysis.key,
+                    key_confidence = (decimal)t.track.audioAnalysis.Analysis.key_confidence,
+                    mode = t.track.audioAnalysis.Analysis.mode,
+                    mode_confidence = (decimal)t.track.audioAnalysis.Analysis.mode_confidence
+                }).ToList());
+            }
+        }
+        public void LoadTrackAlbum(List<SpotifyModels.Album> albums)
+        {
+            var values = new List<KeyValuePair<string, string>>();
+            albums.ForEach(album => album.trackIds.ForEach(trackId => values.Add(new KeyValuePair<string, string>(album.Id, trackId))));
+
+            string insert;
+            insert = "INSERT INTO track_album(trackId, albumId) VALUES (@trackId, @albumId) ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, values.Select(x => new { albumId = x.Key, trackId = x.Value }));
+            }
+        }
+        public void LoadTrackArtists(List<SpotifyModels.Track> tracks)
+        {
+            var values = new List<KeyValuePair<string, string>>();
+            tracks.Where(t => t.artistIds != null).ToList().ForEach(track => track.artistIds.ForEach(artistId => values.Add(new KeyValuePair<string, string>(track.Id, artistId))));
+
+            string insert;
+            insert = "INSERT INTO track_artist(artistId, trackId) VALUES (@artistId, @trackId) ON CONFLICT DO NOTHING;";
+            using (IDbConnection db = new NpgsqlConnection(ConfigurationManager.ConnectionStrings["postgres"].ConnectionString))
+            {
+                var rowsAffected = db.Execute(insert, values.Select(x => new { trackId = x.Key, artistId = x.Value }));
+            }
+        }
+
+
+
+
+    
 
         //                track.audioAnalysis.sections.ForEach(section => {
         //                    //track section
