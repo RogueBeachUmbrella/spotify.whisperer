@@ -7,6 +7,7 @@ using System.Linq;
 using System.Data;
 using Spotify.SpotifyModels;
 using System.Configuration;
+using MongoDB.Driver;
 
 namespace Spotify
 {
@@ -17,63 +18,117 @@ namespace Spotify
 
             var spotify = new Spotify();
             var postgres = new Postgres();
+            var mongo = new MongoClient("");
 
             string countryCode = "us";
             DateTime weekStart = new DateTime(2021, 02, 05);
             DateTime weekEnd = new DateTime(2021, 02, 12);
 
-            var chartReport = spotify.GetChartTracks(countryCode, weekStart, weekEnd, 1, 1);
-            var fullTracks = spotify.GetChartTrackData(chartReport);
+            SpotifyReport Top200Tracks = spotify.GetChartTracks(countryCode, weekStart, weekEnd, 1, 1);
 
-            var artists = GetArtistData(spotify, fullTracks);
-            var (albums, tracks) = GetAlbumTrackData(spotify, fullTracks, artists.Select(a => a.Id).Distinct().ToList());
-            var audioFeatures = spotify.GetAudioFeatures(tracks.Select(t => t.Id).Distinct().ToList());
-            var audioAnalysis = spotify.GetTrackAudioAnalysis(tracks.Select(t => t.Id).Distinct().ToList());
+            IMongoDatabase apiLog = mongo.GetDatabase("ApiLog");
 
-            tracks = MapTrackFeatures(tracks, audioFeatures, audioAnalysis);
-
-            var dataFolder = ConfigurationManager.AppSettings["Data"];
-            Directory.CreateDirectory(@$"{dataFolder}\Artist");
-            Directory.CreateDirectory(@$"{dataFolder}\Album");
-            Directory.CreateDirectory(@$"{dataFolder}\Track");
-            Directory.CreateDirectory(@$"{dataFolder}\TrackAudioFeature");
-            Directory.CreateDirectory(@$"{dataFolder}\TrackAudioAnalysis");
-            Directory.CreateDirectory(@$"{dataFolder}\ChartReport");
+            List<FullTrack> fullTracks = spotify.GetFullTracks(Top200Tracks.tracks.Select(t => t.id).ToList());
+            List<FullArtist> fullArtists = spotify.GetSeveralArtistsFull(fullTracks.SelectMany(x => x.Artists.Select(a => a.Id)).Distinct().ToList());
 
 
 
-            artists.ForEach(a =>
+
+
+
+
+            List<Artist> artists = fullArtists.Select(artist => new Artist()
             {
-                //Directory.CreateDirectory(dataFolder)
-                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Artist\artist-{a.Id}.json", JsonConvert.SerializeObject(a));
-            });
-            albums.ForEach(a =>
+                Id = artist.Id,
+                Name = artist.Name,
+                Type = artist.Type,
+                Uri = artist.Uri,
+                ExternalUrl = artist.ExternalUrls.Values.FirstOrDefault(),
+                Followers = artist.Followers.Total,
+                Images = artist.Images,
+                Popularity = artist.Popularity,
+                albums = fullTracks.Where(ft => ft.Album.Artists.Exists(a => a.Id == artist.Id)).Select(ft => ft.Album.Id).ToList(),
+                tracks = fullTracks.Where(ft => ft.Artists.Exists(a => a.Id == artist.Id)).Select(ft => ft.Id).ToList(),
+                Genres = artist.Genres.ToList()
+            }).Distinct().ToList();
+
+            List<SimpleAlbum> artistSimpleAlbums = spotify.GetArtistAlbums(artists.Select(a => a.Id).ToList()); //missing singles
+
+            List<FullAlbum> artistFullAlbums = spotify.GetFullAlbums(artistSimpleAlbums.Select(x => x.Id).Distinct().ToList());
+
+            List<Album> albums = artistFullAlbums.Select(album => new Album() 
             {
-                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Album\album-{a.Id}.json", JsonConvert.SerializeObject(a));
-            });
+                Id = album.Id,
+                AlbumType = album.AlbumType,
+                Name = album.Name,
+                ReleaseDate = album.ReleaseDate,
+                ReleaseDatePrecision = album.ReleaseDatePrecision,
+                Type = album.Type,
+                Uri = album.Uri,
+                ExternalUrl = album.ExternalUrls.FirstOrDefault().Value,
+                Images = album.Images,
+                artistIds = album.Artists.Select(a => a.Id).ToList(),
+                trackIds = album.Tracks.Items.Select(a => a.Id).ToList(),
+                Genres = album.Genres.ToList()
+            })  .ToList()
+                .Concat(fullTracks
+                .Where(track => !artistFullAlbums
+                .Exists(album => album.Id == track.Album.Id))
+                .Select(track =>
+            new Album()
+            {
+                Id = track.Album.Id,
+                AlbumType = track.Album.AlbumType,
+                Name = track.Album.Name,
+                ReleaseDate = track.Album.ReleaseDate,
+                ReleaseDatePrecision = track.Album.ReleaseDatePrecision,
+                Type = track.Album.Type,
+                Uri = track.Album.Uri,
+                ExternalUrl = track.Album.ExternalUrls.FirstOrDefault().Value,
+                artistIds = track.Album.Artists.Select(a => a.Id).ToList(),
+                trackIds = new List<string>() { track.Id }
+            }).ToList()).ToList();
+
+            List<Track> tracks = fullTracks.Select(t =>
+            new Track()
+            {
+                Id = t.Id,
+                Name = t.Name,
+                Popularity = t.Popularity,
+                TrackNumber = t.TrackNumber,
+                DiscNumber = t.DiscNumber,
+                Explicit = t.Explicit,
+                PreviewUrl = t.PreviewUrl,
+                DurationMs = t.DurationMs,
+                artistIds = t.Artists.Select(a => a.Id).ToList(),
+                albumId = t.Album.Id
+            })
+                .ToList()
+                .Concat(artistFullAlbums
+                .SelectMany(fullAlbum => fullAlbum.Tracks.Items)
+                .ToList()
+                .Where(simpleTrack => !fullTracks
+                .Exists(fullTrack => fullTrack.Id == simpleTrack.Id))
+                .Select(track => new SpotifyModels.Track()
+                {
+                    Id = track.Id,
+                    Name = track.Name,
+                    TrackNumber = track.TrackNumber,
+                    DiscNumber = track.DiscNumber,
+                    Explicit = track.Explicit,
+                    PreviewUrl = track.PreviewUrl,
+                    DurationMs = track.DurationMs,
+                    artistIds = track.Artists.Select(a => a.Id).ToList(),
+                    albumId = artistFullAlbums.Where(a => a.Tracks.Items.Exists(t => t.Id == track.Id)).Select(a => a.Id).FirstOrDefault()
+
+                })
+                .ToList())
+                .ToList();
+
+            List<TrackAudioFeatures> audioFeatures = spotify.GetAudioFeatures(tracks.Select(t => t.Id).Distinct().ToList());
+            List<TrackAudioAnalysis> audioAnalysis = spotify.GetTrackAudioAnalysis(tracks.Select(t => t.Id).Distinct().ToList());
+
             tracks.ForEach(t =>
-            {
-                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Track\track-{t.Id}.json", JsonConvert.SerializeObject(t));
-            });
-
-            //postgres.LoadArtists(artists);
-            //postgres.LoadArtistGenres(artists);
-            //postgres.LoadAlbums(albums);
-            //postgres.LoadAlbumArtists(albums);
-            //postgres.LoadTracks(tracks);
-            //postgres.LoadTrackAlbum(albums);
-            //postgres.LoadTrackArtists(tracks);
-
-
-
-
-        }
-
-        private static List<SpotifyModels.Track> MapTrackFeatures(List<SpotifyModels.Track> tracks, List<TrackAudioFeatures> audioFeatures, List<TrackAudioAnalysis> audioAnalysis)
-        {
-            var fullTracks = tracks;
-
-            fullTracks.ForEach(t =>
             {
                 t.audioFeatures = audioFeatures.Where(f => f != null && f.Id == t.Id).Select(f =>
                 new AudioFeature
@@ -176,18 +231,54 @@ namespace Spotify
                 }).FirstOrDefault();
             });
 
+            var dataFolder = ConfigurationManager.AppSettings["Data"];
+            Directory.CreateDirectory(@$"{dataFolder}\Artist");
+            Directory.CreateDirectory(@$"{dataFolder}\Album");
+            Directory.CreateDirectory(@$"{dataFolder}\Track");
+
+
+
+            artists.ForEach(a =>
+            {
+                //Directory.CreateDirectory(dataFolder)
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Artist\artist-{a.Id}.json", JsonConvert.SerializeObject(a));
+            });
+            albums.ForEach(a =>
+            {
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Album\album-{a.Id}.json", JsonConvert.SerializeObject(a));
+            });
+            tracks.ForEach(t =>
+            {
+                File.WriteAllText(@$"C:\Users\jmgre\source\repos\spotify.whisperer.v1\Spotify\Data\Track\track-{t.Id}.json", JsonConvert.SerializeObject(t));
+            });
+
+            //postgres.LoadArtists(artists);
+            //postgres.LoadArtistGenres(artists);
+            //postgres.LoadAlbums(albums);
+            //postgres.LoadAlbumArtists(albums);
+            //postgres.LoadTracks(tracks);
+            //postgres.LoadTrackAlbum(albums);
+            //postgres.LoadTrackArtists(tracks);
+
+
+
+
+        }
+
+        private static List<SpotifyModels.Track> MapTrackFeatures(List<SpotifyModels.Track> tracks, List<TrackAudioFeatures> audioFeatures, List<TrackAudioAnalysis> audioAnalysis)
+        {
+            
+
             return fullTracks;
         }
         private static (List<SpotifyModels.Album> albums, List<SpotifyModels.Track> tracks) GetAlbumTrackData(Spotify spotify, List<FullTrack> fullTracks, List<string> artistIds)
         {
 
-            var artistSimpleAlbums = spotify.GetArtistAlbums(artistIds); //missing singles
+            List<SimpleAlbum> artistSimpleAlbums = spotify.GetArtistAlbums(artistIds); //missing singles
 
-            var albumIds = artistSimpleAlbums.Select(x => x.Id).Distinct().ToList();
+            List<FullAlbum> artistFullAlbums = spotify.GetFullAlbums(artistSimpleAlbums.Select(x => x.Id).Distinct().ToList());
 
-            var artistFullAlbums = spotify.GetFullAlbums(albumIds);
-
-            var albums = artistFullAlbums.Select(album =>
+            List<Album> albums = artistFullAlbums.Select(album =>
             new SpotifyModels.Album()
             {
                 Id = album.Id,

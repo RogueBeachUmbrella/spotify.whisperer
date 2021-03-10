@@ -8,10 +8,10 @@ namespace Spotify
         public string country { get; set; }
         public DateTime weekStart { get; set; }
         public DateTime weekEnd { get; set; }
-        public List<ChartReportTrack> chartReport { get; set; }
+        public List<ReportTrack> chartReport { get; set; }
         public ChartReport()
         {
-            chartReport = new List<ChartReportTrack>();
+            chartReport = new List<ReportTrack>();
         }
     }
 }

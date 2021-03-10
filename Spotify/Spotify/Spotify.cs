@@ -33,7 +33,7 @@ namespace Spotify
         {
             client = new SpotifyClient(GetAccessToken());
         }
-        public List<ChartReportTrack> GetChartTracks(string countryCode, DateTime weekStart, DateTime weekEnd, int index = 0, int range = 0)
+        public SpotifyReport GetChartTracks(string countryCode, DateTime weekStart, DateTime weekEnd, int index = 0, int range = 0)
         {
             var url = @"https://spotifycharts.com/regional/us/weekly/2021-02-05--2021-02-12/download";
             //var url = @"https://spotifycharts.com/regional/gb/weekly/2021-02-05--2021-02-12/download";
@@ -51,7 +51,7 @@ namespace Spotify
 
             var client = new HttpClient();
             var responseStream = client.GetStreamAsync(url).Result;
-            var chartTracks = new List<ChartReportTrack>();
+            var chartTracks = new List<ReportTrack>();
             using (var reader = new StreamReader(responseStream))
             {
                 using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
@@ -60,31 +60,30 @@ namespace Spotify
                     csv.Read();
                     csv.ReadHeader();
 
-                    chartTracks = csv.GetRecords<ChartReportTrack>().ToList();
+                    chartTracks = csv.GetRecords<ReportTrack>().ToList();
                 }
             }
             if (range == 0)
             {
-                return chartTracks.ToList();
+                return new SpotifyReport() { tracks = chartTracks.ToList(), country = countryCode, week_end = weekEnd, week_start = weekStart };
             }
             else
             {
-                return chartTracks.GetRange(index, range);
-            }
-            
+                return new SpotifyReport() { tracks = chartTracks.GetRange(index, range), country = countryCode, week_end = weekEnd, week_start = weekStart };
+            }          
         }
-        public List<FullTrack> GetChartTrackData(List<ChartReportTrack> chartReportTracks)
+        public List<FullTrack> GetFullTracks(List<string> ids)
         {
             var tracks = new List<FullTrack>();
-            for (int i = 0; i < chartReportTracks.Count; i += (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i))
+            for (int i = 0; i < ids.Count; i += (ids.Count - i) >= 50 ? 50 : (ids.Count - i))
             {
-                var request = new TracksRequest(chartReportTracks.Select(x => x.id).ToList().GetRange(i, (chartReportTracks.Count - i) >= 50 ? 50 : (chartReportTracks.Count - i)));
+                var request = new TracksRequest(ids.Select(x => x).ToList().GetRange(i, (ids.Count - i) >= 50 ? 50 : (ids.Count - i)));
                 var response = client.Tracks.GetSeveral(request).Result;
                 tracks.AddRange(response.Tracks.ToList());
             }
             return tracks;
         }
-        public (List<SpotifyModels.Artist> artists, List<ChartTrack> chartTracks) GetChartData(List<ChartReportTrack> chartReportTracks, string countryCode, DateTime weekStart, DateTime weekEnd)
+        public (List<SpotifyModels.Artist> artists, List<ChartTrack> chartTracks) GetChartData(List<ReportTrack> chartReportTracks, string countryCode, DateTime weekStart, DateTime weekEnd)
         {
             //(List<string> artistIds, List <string> albumIds, List<ChartTrack> chartTracks)
             //var artists = new Dictionary<string, SpotifyModels.Artist>();
@@ -154,7 +153,12 @@ namespace Spotify
                     var response = client.Artists.GetAlbums(id, new ArtistsAlbumsRequest() { IncludeGroupsParam = (ArtistsAlbumsRequest.IncludeGroups.Album), Limit = 50 }).Result.Items;
                     response.ForEach(a => {
                         albums.Add(a);
-                    });         
+                    });
+
+                    response = client.Artists.GetAlbums(id, new ArtistsAlbumsRequest() { IncludeGroupsParam = (ArtistsAlbumsRequest.IncludeGroups.Single), Limit = 50 }).Result.Items;
+                    response.ForEach(a => {
+                        albums.Add(a);
+                    });
                 });
             }
             catch(Exception ex)
