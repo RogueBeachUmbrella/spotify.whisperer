@@ -26,7 +26,7 @@ namespace Spotify
 
             SpotifyReport Top200Tracks = spotify.GetChartTracks(countryCode, weekStart, weekEnd, 1, 1);
 
-            IMongoDatabase apiLog = mongo.GetDatabase("ApiLog");
+            IMongoDatabase Spotify = mongo.GetDatabase("Spotify");
 
             List<FullTrack> fullTracks = spotify.GetFullTracks(Top200Tracks.tracks.Select(t => t.id).ToList());
             List<FullArtist> fullArtists = spotify.GetSeveralArtistsFull(fullTracks.SelectMany(x => x.Artists.Select(a => a.Id)).Distinct().ToList());
